@@ -332,19 +332,19 @@ input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,9
 <script>
 const LOGO = 'https://raw.githubusercontent.com/AndiM4U/prode2026/main/nuevo%20logo.png';
 const GROUPS = {
-  A:[['🇲🇽','México'],['🇿🇦','Sudáfrica'],['🇰🇷','Corea del Sur'],['🇨🇿','Chequia']],
-  B:[['🇨🇦','Canadá'],['🇧🇦','Bosnia y Herz.'],['🇶🇦','Catar'],['🇨🇭','Suiza']],
-  C:[['🇧🇷','Brasil'],['🇲🇦','Marruecos'],['🇭🇹','Haití'],['🏴󠁧󠁢󠁳󠁣󠁴󠁿','Escocia']],
-  D:[['🇺🇸','EE.UU.'],['🇵🇾','Paraguay'],['🇦🇺','Australia'],['🇹🇷','Turquía']],
-  E:[['🇩🇪','Alemania'],['🇨🇼','Curaçao'],['🇨🇮','Costa de Marfil'],['🇪🇨','Ecuador']],
-  F:[['🇳🇱','Países Bajos'],['🇯🇵','Japón'],['🇸🇪','Suecia'],['🇹🇳','Túnez']],
-  G:[['🇧🇪','Bélgica'],['🇪🇬','Egipto'],['🇮🇷','Irán'],['🇳🇿','Nueva Zelanda']],
-  H:[['🇪🇸','España'],['🇨🇻','Cabo Verde'],['🇸🇦','Arabia Saudí'],['🇺🇾','Uruguay']],
-  I:[['🇫🇷','Francia'],['🇸🇳','Senegal'],['🇮🇶','Irak'],['🇳🇴','Noruega']],
-  J:[['🇦🇷','Argentina'],['🇩🇿','Argelia'],['🇦🇹','Austria'],['🇯🇴','Jordania']],
-  K:[['🇵🇹','Portugal'],['🇨🇩','DR Congo'],['🇺🇿','Uzbekistán'],['🇨🇴','Colombia']],
-  L:[['🏴󠁧󠁢󠁥󠁮󠁧󠁿','Inglaterra'],['🇭🇷','Croacia'],['🇬🇭','Ghana'],['🇵🇦','Panamá']]
-};
+  A:[['MX','México'],['ZA','Sudáfrica'],['KR','Corea del Sur'],['CZ','Chequia']],
+  B:[['CA','Canadá'],['BA','Bosnia y Herz.'],['QA','Catar'],['CH','Suiza']],
+  C:[['BR','Brasil'],['MA','Marruecos'],['HT','Haití'],['GB-SCT','Escocia']],
+  D:[['US','EE.UU.'],['PY','Paraguay'],['AU','Australia'],['TR','Turquía']],
+  E:[['DE','Alemania'],['CW','Curaçao'],['CI','Costa de Marfil'],['EC','Ecuador']],
+  F:[['NL','Países Bajos'],['JP','Japón'],['SE','Suecia'],['TN','Túnez']],
+  G:[['BE','Bélgica'],['EG','Egipto'],['IR','Irán'],['NZ','Nueva Zelanda']],
+  H:[['ES','España'],['CV','Cabo Verde'],['SA','Arabia Saudí'],['UY','Uruguay']],
+  I:[['FR','Francia'],['SN','Senegal'],['IQ','Irak'],['NO','Noruega']],
+  J:[['AR','Argentina'],['DZ','Argelia'],['AT','Austria'],['JO','Jordania']],
+  K:[['PT','Portugal'],['CD','DR Congo'],['UZ','Uzbekistán'],['CO','Colombia']],
+  L:[['GB-ENG','Inglaterra'],['HR','Croacia'],['GH','Ghana'],['PA','Panamá']]
+};;
 const S1_MATCHES = [];
 Object.entries(GROUPS).forEach(([g,teams])=>{
   for(let i=0;i<teams.length;i++) for(let j=i+1;j<teams.length;j++)
@@ -522,11 +522,11 @@ function renderS1Inputs(){
       let pa='',pb='';
       try{const v=myPreds[id]?JSON.parse(myPreds[id]):{};pa=v.a||'';pb=v.b||'';}catch(e){}
       html+=`<div class="mrow">
-        <div class="tr">${teams[i][0]}<br>${teams[i][1]}</div>
+        <div class="tr"><img src="https://flagcdn.com/24x18/${teams[i][0].toLowerCase()}.png" onerror="this.style.display='none'" style="margin-bottom:2px;display:block;margin-left:auto"><br>${teams[i][1]}</div>
         <input class="sbox" type="number" min="0" max="20" value="${pa}" placeholder="–" data-id="${id}" data-s="a" oninput="setPred(this)">
         <span style="color:var(--text3);font-size:14px">–</span>
         <input class="sbox" type="number" min="0" max="20" value="${pb}" placeholder="–" data-id="${id}" data-s="b" oninput="setPred(this)">
-        <div class="tl">${teams[j][0]}<br>${teams[j][1]}</div>
+        <div class="tl"><img src="https://flagcdn.com/24x18/${teams[j][0].toLowerCase()}.png" onerror="this.style.display='none'" style="margin-bottom:2px"><br>${teams[j][1]}</div>
       </div>`;
     }
     html+='</div>';
