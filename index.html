@@ -392,6 +392,7 @@ async function doLogin(){
   if(r.error){toast('t-login','❌ '+r.error);return;}
   user=name; isOrg=!!pass; orgPass=pass;
   await loadAll();
+  // Load personal preds BEFORE rendering inputs
   const pr=await api('get-preds',{name},'GET');
   myPreds=pr.preds||{};
   if(isOrg){
@@ -404,6 +405,7 @@ async function doLogin(){
     const p=typeof pd==='string'?JSON.parse(pd):pd;
     document.getElementById('my-champ').value=p.champ||'';
     document.getElementById('my-gol').value=p.goleador||'';
+    // Render AFTER myPreds is loaded
     renderS1Inputs();
     renderS2Inputs();
     updateSectionAccess();
@@ -670,14 +672,21 @@ function setPred(el){
 }
 
 async function savePreds(sec){
-  const toSave={};
+  // Get all existing preds from server first
+  const existing = await api('get-preds',{name:user},'GET');
+  const allPreds = existing.preds||{};
+  
+  // Merge current section preds into all preds
   Object.entries(myPreds).forEach(([k,v])=>{
     const ks=k.startsWith('s1_')?1:2;
     if(ks!==sec) return;
-    try{const p=JSON.parse(v);if(p.a!==''||p.b!=='')toSave[k]=v;}catch(e){}
+    try{const p=JSON.parse(v);if(p.a!==''||p.b!=='')allPreds[k]=v;}catch(e){}
   });
-  await api('save-preds',{name:user,preds:toSave});
-  toast(`t-s${sec}`,`✅ ${Object.keys(toSave).length} pronósticos guardados`);
+  
+  await api('save-preds',{name:user,preds:allPreds});
+  myPreds=allPreds;
+  const secCount=Object.keys(allPreds).filter(k=>k.startsWith('s'+sec+'_')).length;
+  toast(`t-s${sec}`,`✅ ${secCount} pronósticos guardados`);
 }
 
 async function savePlayerData(){
