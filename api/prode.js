@@ -1,5 +1,8 @@
 const { Redis } = require('@upstash/redis');
-const redis = Redis.fromEnv();
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 const ORG_PASS = process.env.ORG_PASSWORD || 'mundial2026';
 
 module.exports = async function handler(req, res) {
