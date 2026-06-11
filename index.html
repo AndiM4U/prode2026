@@ -220,7 +220,8 @@ input:checked + .sw-track::after{transform:translateX(20px)}
       <button class="stab" id="res-tab-s2" onclick="showResTab('rs2',this)">Eliminatorias</button>
     </div>
     <div id="rs1" class="sec active">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Ingresá los goles de cada partido una vez finalizado.</div>
+      <div id="today-matches-wrap" style="margin-bottom:12px"></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Todos los partidos de la fase de grupos:</div>
       <div id="fixture-s1-list"><div class="loading">Cargando...</div></div>
       <div id="t-r1" class="toast"></div>
     </div>
@@ -421,6 +422,7 @@ async function loadAll(){
   renderRanking('p-rank-list','p-stats');
   renderRanking('o-rank-list','o-stats');
   renderFixtureS1();
+  renderTodayMatches();
   renderElimResults();
   renderCrucesList();
   renderOrgPlayers();
@@ -576,13 +578,16 @@ function renderS1Inputs(){
       const id=`s1_${g}_${i}_${j}`;
       let pa='',pb='';
       try{const v=myPreds[id]?JSON.parse(myPreds[id]):{};pa=v.a||'';pb=v.b||'';}catch(e){}
-      html+=`<div class="mrow">
+      const locked=isMatchLocked(id);
+      const lockStyle=locked?'opacity:0.45;pointer-events:none':'';
+      const lockIcon=locked?'<span style="font-size:9px;color:var(--red);display:block;text-align:center">🔒</span>':'';
+      html+=`<div class="mrow" style="${lockStyle}">
         <div class="tr"><img src="https://flagcdn.com/16x12/${teams[i][0].toLowerCase()}.png" onerror="this.style.display='none'" style="margin-bottom:2px;display:block;margin-left:auto"><br>${teams[i][1]}</div>
-        <input class="sbox" type="number" min="0" max="20" value="${pa}" placeholder="–" data-id="${id}" data-s="a" oninput="setPred(this)">
+        <input class="sbox" type="number" min="0" max="20" value="${pa}" placeholder="–" data-id="${id}" data-s="a" oninput="setPred(this)" ${locked?'disabled':''}>
         <span style="color:var(--text3);font-size:14px">–</span>
-        <input class="sbox" type="number" min="0" max="20" value="${pb}" placeholder="–" data-id="${id}" data-s="b" oninput="setPred(this)">
+        <input class="sbox" type="number" min="0" max="20" value="${pb}" placeholder="–" data-id="${id}" data-s="b" oninput="setPred(this)" ${locked?'disabled':''}>
         <div class="tl"><img src="https://flagcdn.com/16x12/${teams[j][0].toLowerCase()}.png" onerror="this.style.display='none'" style="margin-bottom:2px"><br>${teams[j][1]}</div>
-      </div>`;
+      </div>${lockIcon}`;
     }
     html+='</div>';
   });
@@ -612,8 +617,52 @@ function renderS2Inputs(){
   }).join('')+'</div>';
 }
 
+// ── TIME LOCK ────────────────────────────────────────────────────
+const MATCH_TIMES = {};
+FIXTURE_S1.forEach(day=>{
+  day.matches.forEach(m=>{
+    // Parse date and time in Argentina timezone (UTC-3)
+    const [wd,dd,mon] = day.date.split(' ');
+    const months={'Ene':1,'Feb':2,'Mar':3,'Abr':4,'May':5,'Jun':6,'Jul':7,'Ago':8,'Sep':9,'Oct':10,'Nov':11,'Dic':12};
+    const month = months[mon]||6;
+    const day_num = parseInt(dd);
+    const [hh,mm] = m.time.split(':').map(Number);
+    // Create date in UTC (Argentina = UTC-3, so add 3 hours)
+    const utcH = hh + 3;
+    const d = new Date(Date.UTC(2026, month-1, day_num, utcH, mm, 0));
+    // Handle midnight crossover
+    if(utcH >= 24){
+      d.setUTCDate(d.getUTCDate()+1);
+      d.setUTCHours(utcH-24);
+    }
+    MATCH_TIMES[m.id] = d.getTime();
+  });
+});
+
+function isMatchLocked(id){
+  const t = MATCH_TIMES[id];
+  if(!t) return false;
+  return Date.now() >= t;
+}
+
+function getArgTime(id){
+  const t = MATCH_TIMES[id];
+  if(!t) return '';
+  const d = new Date(t);
+  const arg = new Date(d.getTime() - 0); // already in UTC
+  const hArg = ((arg.getUTCHours() - 3 + 24) % 24).toString().padStart(2,'0');
+  const mArg = arg.getUTCMinutes().toString().padStart(2,'0');
+  return hArg+':'+mArg;
+}
+// ── END TIME LOCK ─────────────────────────────────────────────────
+
 function setPred(el){
   const id=el.dataset.id,s=el.dataset.s;
+  if(isMatchLocked(id)){
+    el.value='';
+    toast('t-s1','⛔ Este partido ya comenzó');
+    return;
+  }
   let cur={a:'',b:''};
   try{cur=myPreds[id]?JSON.parse(myPreds[id]):{a:'',b:''};}catch(e){}
   cur[s]=el.value;
@@ -638,6 +687,63 @@ async function savePlayerData(){
   await loadAll();
   toast('t-extra','✅ Guardado');
 }
+
+
+// ── TODAY MATCHES ─────────────────────────────────────────────────
+function renderTodayMatches(){
+  const el = document.getElementById('today-matches-wrap');
+  if(!el) return;
+  const now = Date.now();
+  const ARG_OFFSET = -3 * 60 * 60 * 1000;
+  const todayArg = new Date(now + ARG_OFFSET);
+  const todayStr = todayArg.toISOString().slice(0,10);
+
+  const todayList = [];
+  FIXTURE_S1.forEach(day=>{
+    day.matches.forEach(m=>{
+      const t = MATCH_TIMES[m.id];
+      if(!t) return;
+      const matchDate = new Date(t + ARG_OFFSET).toISOString().slice(0,10);
+      if(matchDate === todayStr) todayList.push({...m, day: day.date});
+    });
+  });
+
+  if(!todayList.length){
+    el.innerHTML='';
+    return;
+  }
+
+  let html = `<div class="card" style="background:var(--blue2);border-color:var(--blue);padding:12px 14px">
+    <div style="font-size:12px;font-weight:600;color:var(--blue3);margin-bottom:8px">⚽ Partidos de hoy — ${todayList[0].day}</div>`;
+  todayList.forEach(m=>{
+    const rv = data.results[m.id];
+    const res = rv?(typeof rv==='string'?JSON.parse(rv):rv):null;
+    const done = res!==null && res.sa!==undefined;
+    const now2 = Date.now();
+    const started = now2 >= MATCH_TIMES[m.id];
+    html += `<div style="display:grid;grid-template-columns:1fr auto auto auto 1fr auto auto;align-items:center;gap:5px;padding:6px 0;border-bottom:0.5px solid rgba(24,95,165,0.15)">
+      <div style="text-align:right;font-size:11px;font-weight:500">
+        <img src="https://flagcdn.com/16x12/${m.a[0].toLowerCase()}.png" onerror="this.style.display='none'" style="vertical-align:middle;margin-right:2px">${m.a[1]}
+      </div>
+      <input type="number" min="0" max="20" placeholder="–" value="${done?res.sa:''}"
+        style="width:34px;height:32px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'white'};color:var(--text);font-size:14px;font-weight:600"
+        oninput="stageRes('${m.id}','${m.a[1]}','${m.b[1]}','sa',this.value)">
+      <span style="color:var(--text3);font-size:12px">–</span>
+      <input type="number" min="0" max="20" placeholder="–" value="${done?res.sb:''}"
+        style="width:34px;height:32px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'white'};color:var(--text);font-size:14px;font-weight:600"
+        oninput="stageRes('${m.id}','${m.a[1]}','${m.b[1]}','sb',this.value)">
+      <div style="font-size:11px;font-weight:500">
+        <img src="https://flagcdn.com/16x12/${m.b[0].toLowerCase()}.png" onerror="this.style.display='none'" style="vertical-align:middle;margin-right:2px">${m.b[1]}
+      </div>
+      <span style="font-size:10px;color:${started?'var(--red)':'var(--text3)'};min-width:36px">${started?(done?'✓ Fin':'En juego'):'${m.time}hs'}</span>
+      <button style="font-size:10px;padding:3px 7px;border-radius:5px;border:0.5px solid ${done?'var(--teal)':'var(--blue)'};background:${done?'var(--teal2)':'var(--blue2)'};color:${done?'var(--teal)':'var(--blue3)'};cursor:pointer"
+        onclick="saveResS1('${m.id}','${m.a[1]}','${m.b[1]}')">${done?'✓':'OK'}</button>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+// ── END TODAY MATCHES ─────────────────────────────────────────────
 
 // ── ORG FIXTURE S1 ───────────────────────────────────────────────
 function renderFixtureS1(){
