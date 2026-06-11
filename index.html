@@ -751,7 +751,7 @@ function renderTodayMatches(){
       <div style="font-size:11px;font-weight:500">
         <img src="https://flagcdn.com/16x12/${m.b[0].toLowerCase()}.png" onerror="this.style.display='none'" style="vertical-align:middle;margin-right:2px">${m.b[1]}
       </div>
-      <span style="font-size:10px;color:${started?'var(--red)':'var(--text3)'};min-width:36px">${started?(done?'✓ Fin':'En juego'):'${m.time}hs'}</span>
+      <span style="font-size:10px;color:${started?'var(--red)':'var(--text3)'};min-width:36px">${started?(done?'✓ Fin':'En juego'):m.time+'hs'}</span>
       <button style="font-size:10px;padding:3px 7px;border-radius:5px;border:0.5px solid ${done?'var(--teal)':'var(--blue)'};background:${done?'var(--teal2)':'var(--blue2)'};color:${done?'var(--teal)':'var(--blue3)'};cursor:pointer"
         onclick="saveResS1('${m.id}','${m.a[1]}','${m.b[1]}')">${done?'✓':'OK'}</button>
     </div>`;
