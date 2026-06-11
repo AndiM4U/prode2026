@@ -579,7 +579,11 @@ function renderS1Inputs(){
     for(let i=0;i<teams.length;i++) for(let j=i+1;j<teams.length;j++){
       const id=`s1_${g}_${i}_${j}`;
       let pa='',pb='';
-      try{const v=myPreds[id]?JSON.parse(myPreds[id]):{};pa=v.a||'';pb=v.b||'';}catch(e){}
+      try{
+        const raw=myPreds[id];
+        const v=raw?(typeof raw==='string'?JSON.parse(raw):raw):{};
+        pa=v.a||'';pb=v.b||'';
+      }catch(e){}
       const locked=isMatchLocked(id);
       const lockStyle=locked?'opacity:0.45;pointer-events:none':'';
       const lockIcon=locked?'<span style="font-size:9px;color:var(--red);display:block;text-align:center">🔒</span>':'';
@@ -666,7 +670,10 @@ function setPred(el){
     return;
   }
   let cur={a:'',b:''};
-  try{cur=myPreds[id]?JSON.parse(myPreds[id]):{a:'',b:''};}catch(e){}
+  try{
+    const raw=myPreds[id];
+    cur=raw?(typeof raw==='string'?JSON.parse(raw):raw):{a:'',b:''};
+  }catch(e){}
   cur[s]=el.value;
   myPreds[id]=JSON.stringify(cur);
 }
@@ -680,7 +687,7 @@ async function savePreds(sec){
   Object.entries(myPreds).forEach(([k,v])=>{
     const ks=k.startsWith('s1_')?1:2;
     if(ks!==sec) return;
-    try{const p=JSON.parse(v);if(p.a!==''||p.b!=='')allPreds[k]=v;}catch(e){}
+    try{const p=typeof v==='string'?JSON.parse(v):v;if(p.a!==''||p.b!=='')allPreds[k]=typeof v==='string'?v:JSON.stringify(v);}catch(e){}
   });
   
   await api('save-preds',{name:user,preds:allPreds});
