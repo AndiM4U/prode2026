@@ -595,6 +595,12 @@ function renderS1Inputs(){
       const locked=isMatchLocked(id);
       const lockStyle=locked?'opacity:0.45;pointer-events:none':'';
       const lockIcon=locked?'<span style="font-size:9px;color:var(--red);display:block;text-align:center">🔒</span>':'';
+      // Get match date and time
+      const matchInfo = FIXTURE_S1.reduce((found, day)=>{
+        const m = day.matches.find(x=>x.id===id);
+        return m ? {date: day.date, time: m.time} : found;
+      }, null);
+      const matchLabel = matchInfo ? `<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-bottom:2px">${matchInfo.date} ${matchInfo.time}hs</span>` : '';
       html+=`<div class="mrow" style="${lockStyle}">
         <div class="tr"><img src="https://flagcdn.com/16x12/${teams[i][0].toLowerCase()}.png" onerror="this.style.display='none'" style="margin-bottom:2px;display:block;margin-left:auto"><br>${teams[i][1]}</div>
         <input class="sbox" type="number" min="0" max="20" value="${pa}" placeholder="–" data-id="${id}" data-s="a" oninput="setPred(this)" ${locked?'disabled':''}>
@@ -757,7 +763,13 @@ function renderPlayerResults(){
     matches.forEach(({m,res,pa,pb,pts,hasPred})=>{
       const ptsColor = pts===3?'var(--green)':pts===1?'var(--amber)':'var(--red)';
       const ptsBg = pts===3?'var(--green2)':pts===1?'var(--amber2)':'var(--red2)';
-      html+=`<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+      const mInfo = FIXTURE_S1.reduce((found, day)=>{
+        const mx = day.matches.find(x=>x.id===m.id);
+        return mx ? {date: day.date, time: mx.time} : found;
+      }, null);
+      html+=`<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">
+        ${mInfo?`<div style="font-size:10px;color:var(--text3);margin-bottom:3px">${mInfo.date} · ${mInfo.time}hs</div>`:''}
+        <div style="display:flex;align-items:center;gap:6px">
         <img src="https://flagcdn.com/16x12/${m.a[0].toLowerCase()}.png" onerror="this.style.display='none'">
         <span style="font-size:12px;font-weight:600;flex:1;text-align:right">${m.a[1]}</span>
         <span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">${res.sa}–${res.sb}</span>
@@ -766,7 +778,7 @@ function renderPlayerResults(){
         ${hasPred?`<span style="font-size:10px;color:var(--text3)">${pa}–${pb}</span>
         <span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:${ptsBg};color:${ptsColor}">${pts}pts</span>`
         :'<span style="font-size:10px;color:var(--text3)">sin pred.</span>'}
-      </div>`;
+        </div></div>\`;
     });
     html+='</div>';
   });
