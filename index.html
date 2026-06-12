@@ -647,21 +647,19 @@ function renderS2Inputs(){
 const MATCH_TIMES = {};
 FIXTURE_S1.forEach(day=>{
   day.matches.forEach(m=>{
-    // Parse date and time in Argentina timezone (UTC-3)
-    const [wd,dd,mon] = day.date.split(' ');
+    // Parse Argentina date/time and convert to UTC
+    const parts = day.date.split(' ');
+    const dd = parseInt(parts[1]);
     const months={'Ene':1,'Feb':2,'Mar':3,'Abr':4,'May':5,'Jun':6,'Jul':7,'Ago':8,'Sep':9,'Oct':10,'Nov':11,'Dic':12};
-    const month = months[mon]||6;
-    const day_num = parseInt(dd);
-    const [hh,mm] = m.time.split(':').map(Number);
-    // Create date in UTC (Argentina = UTC-3, so add 3 hours)
-    const utcH = hh + 3;
-    const d = new Date(Date.UTC(2026, month-1, day_num, utcH, mm, 0));
-    // Handle midnight crossover
-    if(utcH >= 24){
-      d.setUTCDate(d.getUTCDate()+1);
-      d.setUTCHours(utcH-24);
-    }
-    MATCH_TIMES[m.id] = d.getTime();
+    const month = months[parts[2]]||6;
+    const timeParts = m.time.split(':').map(Number);
+    const hh = timeParts[0];
+    const mm2 = timeParts[1];
+    // Argentina is UTC-3, so UTC = Argentina + 3
+    // Use Date constructor to handle day overflow automatically
+    const argDate = new Date(2026, month-1, dd, hh, mm2, 0);
+    const utcMs = argDate.getTime() + (3 * 60 * 60 * 1000);
+    MATCH_TIMES[m.id] = utcMs;
   });
 });
 
