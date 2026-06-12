@@ -121,15 +121,16 @@ input:checked + .sw-track::after{transform:translateX(20px)}
     </div>
     <button class="btn-ghost" onclick="logout()">Salir</button>
   </div>
+  <div id="p-position-banner" style="display:none;margin-bottom:10px"></div>
   <div class="tabs">
-    <button class="tab active" onclick="showTab('p-rank','s-player')">Ranking</button>
-    <button class="tab" onclick="showTab('p-resultados','s-player')">Resultados</button>
-    <button class="tab" onclick="showTab('p-s1','s-player')">Mis pronósticos</button>
+    <button class="tab active" onclick="showTab('p-s1','s-player')">Mis pronósticos</button>
     <button class="tab" onclick="showTab('p-s2','s-player')">Eliminatorias</button>
     <button class="tab" onclick="showTab('p-extra','s-player')">Campeón</button>
+    <button class="tab" onclick="showTab('p-resultados','s-player')">Resultados</button>
+    <button class="tab" onclick="showTab('p-rank','s-player')">Ranking</button>
   </div>
 
-  <div id="p-rank" class="sec active">
+  <div id="p-rank" class="sec">
     <div class="stabs">
       <button class="stab s1a active" id="rank-tab-general" onclick="showRankView('general',this)">General</button>
       <button class="stab" id="rank-tab-s1" onclick="showRankView('s1',this)">Fase grupos</button>
@@ -146,7 +147,7 @@ input:checked + .sw-track::after{transform:translateX(20px)}
     <button class="btn-ghost" style="width:100%;margin-top:8px;display:block;text-align:center" onclick="renderPlayerResults()">↻ Actualizar</button>
   </div>
 
-  <div id="p-s1" class="sec">
+  <div id="p-s1" class="sec active">
     <div id="p-s1-closed" style="display:none" class="card" style="background:var(--red2);border-color:var(--red)">
       <div style="font-size:13px;font-weight:500;color:var(--red);text-align:center">🔒 Sección cerrada por el organizador</div>
     </div>
@@ -416,6 +417,7 @@ async function doLogin(){
     renderS1Inputs();
     renderS2Inputs();
     updateSectionAccess();
+    renderPositionBanner();
     showScreen('s-player');
   }
 }
@@ -433,6 +435,7 @@ async function loadAll(){
   renderFixtureS1();
   renderTodayMatches();
   renderPlayerResults();
+  renderPositionBanner();
   renderElimResults();
   renderCrucesList();
   renderOrgPlayers();
@@ -722,6 +725,35 @@ async function savePlayerData(){
   toast('t-extra','✅ Guardado');
 }
 
+
+
+// ── POSITION BANNER ───────────────────────────────────────────────
+function renderPositionBanner(){
+  const el = document.getElementById('p-position-banner');
+  if(!el || !user) return;
+  const names = Object.keys(data.players||{});
+  if(!names.length){ el.style.display='none'; return; }
+  const ranked = names.map(n=>({name:n, pts:calcPts(n,null), pts_s1:calcPts(n,1)}))
+    .sort((a,b)=>b.pts-a.pts||(b.pts_s1-a.pts_s1));
+  const pos = ranked.findIndex(p=>p.name===user);
+  if(pos===-1){ el.style.display='none'; return; }
+  const myPts = ranked[pos].pts;
+  const total = ranked.length;
+  const medal = pos===0?'🥇':pos===1?'🥈':pos===2?'🥉':'';
+  const bg = pos===0?'var(--amber2)':pos===1?'var(--bg2)':pos===2?'var(--red2)':'var(--blue2)';
+  const fg = pos===0?'var(--amber3)':pos===1?'var(--text2)':pos===2?'var(--coral)':'var(--blue3)';
+  const leader = ranked[0];
+  const diff = pos===0 ? '' : ' · '+(myPts - leader.pts)+' pts del líder';
+  el.style.display='block';
+  el.innerHTML='<div style="background:'+bg+';border-radius:var(--rl);padding:10px 16px;display:flex;align-items:center;gap:10px;border:0.5px solid '+fg+'">'
+    +'<div style="font-size:24px">'+medal+'</div>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:13px;font-weight:700;color:'+fg+'">Posición '+( pos+1)+' de '+total+diff+'</div>'
+    +'<div style="font-size:11px;color:'+fg+';opacity:0.8">'+myPts+' pts totales · S1: '+calcPts(user,1)+' · S2: '+calcPts(user,2)+'</div>'
+    +'</div>'
+    +'</div>';
+}
+// ── END POSITION BANNER ───────────────────────────────────────────
 
 // ── PLAYER RESULTS VIEW ──────────────────────────────────────────
 function renderPlayerResults(){
