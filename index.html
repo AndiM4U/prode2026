@@ -123,7 +123,8 @@ input:checked + .sw-track::after{transform:translateX(20px)}
   </div>
   <div class="tabs">
     <button class="tab active" onclick="showTab('p-rank','s-player')">Ranking</button>
-    <button class="tab" onclick="showTab('p-s1','s-player')">Fase grupos</button>
+    <button class="tab" onclick="showTab('p-resultados','s-player')">Resultados</button>
+    <button class="tab" onclick="showTab('p-s1','s-player')">Mis pronósticos</button>
     <button class="tab" onclick="showTab('p-s2','s-player')">Eliminatorias</button>
     <button class="tab" onclick="showTab('p-extra','s-player')">Campeón</button>
   </div>
@@ -137,6 +138,12 @@ input:checked + .sw-track::after{transform:translateX(20px)}
     <div class="sgrid" id="p-stats"></div>
     <div class="card" id="p-rank-list"><div class="loading">Cargando ranking...</div></div>
     <button class="btn-ghost" style="width:100%;margin-top:8px;display:block;text-align:center" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+
+  <div id="p-resultados" class="sec">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Resultados oficiales cargados por el organizador.</div>
+    <div id="p-results-list"><div class="loading">Cargando...</div></div>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;display:block;text-align:center" onclick="renderPlayerResults()">↻ Actualizar</button>
   </div>
 
   <div id="p-s1" class="sec">
@@ -425,6 +432,7 @@ async function loadAll(){
   renderRanking('o-rank-list','o-stats');
   renderFixtureS1();
   renderTodayMatches();
+  renderPlayerResults();
   renderElimResults();
   renderCrucesList();
   renderOrgPlayers();
@@ -705,22 +713,124 @@ async function savePlayerData(){
 }
 
 
+// ── PLAYER RESULTS VIEW ──────────────────────────────────────────
+function renderPlayerResults(){
+  const el = document.getElementById('p-results-list');
+  if(!el) return;
+  const results = data.results||{};
+  const s1Results = Object.entries(results).filter(([id])=>id.startsWith('s1_'));
+  const s2Results = Object.entries(results).filter(([id])=>id.startsWith('s2_'));
+
+  if(!s1Results.length && !s2Results.length){
+    el.innerHTML='<div class="empty">Todavía no hay resultados cargados.</div>';
+    return;
+  }
+
+  // Group S1 results by day
+  const byDay = {};
+  FIXTURE_S1.forEach(day=>{
+    day.matches.forEach(m=>{
+      const rv = results[m.id];
+      if(!rv) return;
+      const res = typeof rv==='string'?JSON.parse(rv):rv;
+      if(!byDay[day.date]) byDay[day.date]=[];
+      const pred = (data.predictions[user]||{})[m.id];
+      let pa='',pb='',pts=0;
+      try{
+        const pp=pred?(typeof pred==='string'?JSON.parse(pred):pred):null;
+        if(pp){pa=pp.a;pb=pp.b;}
+        if(pa!==''&&pb!==''){
+          const rw=res.sa>res.sb?'A':res.sa<res.sb?'B':'X';
+          const pw=parseInt(pa)>parseInt(pb)?'A':parseInt(pa)<parseInt(pb)?'B':'X';
+          if(rw===pw) pts+=1;
+          if(parseInt(pa)===res.sa&&parseInt(pb)===res.sb) pts+=2;
+        }
+      }catch(e){}
+      byDay[day.date].push({m,res,pa,pb,pts,hasPred:pa!==''&&pb!==''});
+    });
+  });
+
+  let html='';
+  Object.entries(byDay).forEach(([day,matches])=>{
+    html+=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">${day}</div>`;
+    html+='<div class="card" style="padding:8px 12px">';
+    matches.forEach(({m,res,pa,pb,pts,hasPred})=>{
+      const ptsColor = pts===3?'var(--green)':pts===1?'var(--amber)':'var(--red)';
+      const ptsBg = pts===3?'var(--green2)':pts===1?'var(--amber2)':'var(--red2)';
+      html+=`<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+        <img src="https://flagcdn.com/16x12/${m.a[0].toLowerCase()}.png" onerror="this.style.display='none'">
+        <span style="font-size:12px;font-weight:600;flex:1;text-align:right">${m.a[1]}</span>
+        <span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">${res.sa}–${res.sb}</span>
+        <span style="font-size:12px;font-weight:600;flex:1">${m.b[1]}</span>
+        <img src="https://flagcdn.com/16x12/${m.b[0].toLowerCase()}.png" onerror="this.style.display='none'">
+        ${hasPred?`<span style="font-size:10px;color:var(--text3)">${pa}–${pb}</span>
+        <span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:${ptsBg};color:${ptsColor}">${pts}pts</span>`
+        :'<span style="font-size:10px;color:var(--text3)">sin pred.</span>'}
+      </div>`;
+    });
+    html+='</div>';
+  });
+
+  if(s2Results.length){
+    html+=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">Eliminatorias</div>`;
+    html+='<div class="card" style="padding:8px 12px">';
+    s2Results.forEach(([id,rv])=>{
+      const res=typeof rv==='string'?JSON.parse(rv):rv;
+      const fix=(data.fixtures||[]).find(f=>f.id===id);
+      const label=fix?fix.label:id;
+      const pred=(data.predictions[user]||{})[id];
+      let pa='',pb='',pts=0;
+      try{
+        const pp=pred?(typeof pred==='string'?JSON.parse(pred):pred):null;
+        if(pp){pa=pp.a;pb=pp.b;}
+        if(pa!==''&&pb!==''){
+          const rw=res.sa>res.sb?'A':res.sa<res.sb?'B':'X';
+          const pw=parseInt(pa)>parseInt(pb)?'A':parseInt(pa)<parseInt(pb)?'B':'X';
+          if(rw===pw) pts+=1;
+          if(parseInt(pa)===res.sa&&parseInt(pb)===res.sb) pts+=2;
+        }
+      }catch(e){}
+      const ptsColor=pts===3?'var(--green)':pts===1?'var(--amber)':'var(--red)';
+      const ptsBg=pts===3?'var(--green2)':pts===1?'var(--amber2)':'var(--red2)';
+      html+=`<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">
+        <div style="font-size:10px;color:var(--text2);margin-bottom:3px">${label}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;font-weight:600;flex:1;text-align:right">${res.teamA}</span>
+          <span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">${res.sa}–${res.sb}</span>
+          <span style="font-size:12px;font-weight:600;flex:1">${res.teamB}</span>
+          ${pa!==''?`<span style="font-size:10px;color:var(--text3)">${pa}–${pb}</span>
+          <span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:${ptsBg};color:${ptsColor}">${pts}pts</span>`
+          :'<span style="font-size:10px;color:var(--text3)">sin pred.</span>'}
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  el.innerHTML=html;
+}
+// ── END PLAYER RESULTS VIEW ───────────────────────────────────────
+
 // ── TODAY MATCHES ─────────────────────────────────────────────────
+function getArgDateStr(ts){
+  // Convert UTC timestamp to Argentina date string (UTC-3)
+  const d = new Date(ts - 3*60*60*1000);
+  return d.toISOString().slice(0,10);
+}
+
 function renderTodayMatches(){
   const el = document.getElementById('today-matches-wrap');
   if(!el) return;
   const now = Date.now();
-  const ARG_OFFSET = -3 * 60 * 60 * 1000;
-  const todayArg = new Date(now + ARG_OFFSET);
-  const todayStr = todayArg.toISOString().slice(0,10);
+  const todayStr = getArgDateStr(now);
 
   const todayList = [];
   FIXTURE_S1.forEach(day=>{
     day.matches.forEach(m=>{
       const t = MATCH_TIMES[m.id];
       if(!t) return;
-      const matchDate = new Date(t + ARG_OFFSET).toISOString().slice(0,10);
-      if(matchDate === todayStr) todayList.push({...m, day: day.date});
+      const matchDateStr = getArgDateStr(t);
+      if(matchDateStr === todayStr) todayList.push({...m, day: day.date});
     });
   });
 
