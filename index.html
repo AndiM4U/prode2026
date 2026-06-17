@@ -392,6 +392,19 @@ async function api(action,body={},method='POST'){
   return r.json();
 }
 
+function formatLastSeen(ts){
+  if(!ts) return 'sin registro';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff/60000);
+  const hours = Math.floor(diff/3600000);
+  const days = Math.floor(diff/86400000);
+  if(mins < 1) return 'último ingreso: ahora';
+  if(mins < 60) return 'último ingreso: hace '+mins+'min';
+  if(hours < 24) return 'último ingreso: hace '+hours+'h';
+  if(days === 1) return 'último ingreso: ayer';
+  return 'último ingreso: hace '+days+'d';
+}
+
 function normalizeName(raw){
   // Trim, collapse multiple spaces, and Title Case each word
   return raw.trim().replace(/\s+/g,' ').split(' ').map(w=>
@@ -404,7 +417,7 @@ async function doLogin(){
   const name=normalizeName(rawName);
   const pass=document.getElementById('l-pass').value.trim();
   if(!name){toast('t-login','⚠️ Ingresá tu nombre');return;}
-  const r=await api('join',{name,pass});
+  const r=await api('join',{name,pass,lastSeen:Date.now()});
   if(r.error){toast('t-login','❌ '+r.error);return;}
   user=name; isOrg=!!pass; orgPass=pass;
   await loadAll();
@@ -1181,7 +1194,7 @@ function renderOrgPlayers(){
         <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:600">${n} <span style="font-size:10px;color:var(--text3)">${isExpanded?'▲':'▼'}</span></div>
           <div style="font-size:11px;color:var(--text2)">🏆 ${p.champ||'–'} ${s.champ?'✓':''} · ⚽ ${p.goleador||'–'} ${s.gol?'✓':''}</div>
-          <div style="font-size:10px;color:var(--text3)">S1: ${calcPts(n,1)} · S2: ${calcPts(n,2)}</div>
+          <div style="font-size:10px;color:var(--text3)">S1: ${calcPts(n,1)} · S2: ${calcPts(n,2)} · ${formatLastSeen(p.lastSeen)}</div>
         </div>
         <button class="btn-sm" onclick="event.stopPropagation();deletePlayer('${n}')">✕</button>
       </div>
