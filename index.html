@@ -392,8 +392,16 @@ async function api(action,body={},method='POST'){
   return r.json();
 }
 
+function normalizeName(raw){
+  // Trim, collapse multiple spaces, and Title Case each word
+  return raw.trim().replace(/\s+/g,' ').split(' ').map(w=>
+    w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()
+  ).join(' ');
+}
+
 async function doLogin(){
-  const name=document.getElementById('l-name').value.trim();
+  const rawName=document.getElementById('l-name').value;
+  const name=normalizeName(rawName);
   const pass=document.getElementById('l-pass').value.trim();
   if(!name){toast('t-login','⚠️ Ingresá tu nombre');return;}
   const r=await api('join',{name,pass});
@@ -1150,6 +1158,8 @@ async function confirmSuggestedFixtures(){
 }
 
 // ── ORG PLAYERS ──────────────────────────────────────────────────
+let expandedPlayer = null;
+
 function renderOrgPlayers(){
   const el=document.getElementById('o-players-list');
   if(!el) return;
@@ -1160,16 +1170,67 @@ function renderOrgPlayers(){
     const p=typeof pd==='string'?JSON.parse(pd):pd;
     const [bg,fg]=gc(i);
     const s=champGolStatus(n);
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border)">
-      <div class="av" style="background:${bg};color:${fg}">${ini(n)}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600">${n}</div>
-        <div style="font-size:11px;color:var(--text2)">🏆 ${p.champ||'–'} ${s.champ?'✓':''} · ⚽ ${p.goleador||'–'} ${s.gol?'✓':''}</div>
-        <div style="font-size:10px;color:var(--text3)">S1: ${calcPts(n,1)} · S2: ${calcPts(n,2)}</div>
+    const isExpanded = expandedPlayer===n;
+    let predsHtml='';
+    if(isExpanded){
+      predsHtml=renderPlayerPredsDetail(n);
+    }
+    return `<div style="border-bottom:0.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer" onclick="toggleExpandPlayer('${n}')">
+        <div class="av" style="background:${bg};color:${fg}">${ini(n)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600">${n} <span style="font-size:10px;color:var(--text3)">${isExpanded?'▲':'▼'}</span></div>
+          <div style="font-size:11px;color:var(--text2)">🏆 ${p.champ||'–'} ${s.champ?'✓':''} · ⚽ ${p.goleador||'–'} ${s.gol?'✓':''}</div>
+          <div style="font-size:10px;color:var(--text3)">S1: ${calcPts(n,1)} · S2: ${calcPts(n,2)}</div>
+        </div>
+        <button class="btn-sm" onclick="event.stopPropagation();deletePlayer('${n}')">✕</button>
       </div>
-      <button class="btn-sm" onclick="deletePlayer('${n}')">✕</button>
+      ${predsHtml}
     </div>`;
   }).join('');
+}
+
+function toggleExpandPlayer(name){
+  expandedPlayer = expandedPlayer===name ? null : name;
+  renderOrgPlayers();
+}
+
+function renderPlayerPredsDetail(name){
+  const preds = data.predictions[name]||{};
+  const entries = Object.entries(preds);
+  if(!entries.length) return '<div style="padding:8px 0 12px 46px;font-size:11px;color:var(--text3)">Sin pronósticos cargados</div>';
+
+  let html = '<div style="padding:6px 0 12px 0;background:var(--bg2);border-radius:var(--r);margin-bottom:6px">';
+  html += '<div style="font-size:10px;color:var(--text2);padding:6px 12px;font-weight:600">Pronósticos cargados (' + entries.length + ')</div>';
+
+  entries.forEach(([id,predRaw])=>{
+    let pred;
+    try{ pred = typeof predRaw==='string'?JSON.parse(predRaw):predRaw; }catch(e){ return; }
+    if(!pred || pred.a===''||pred.a===undefined) return;
+
+    let label = id;
+    let teamAName='', teamBName='';
+    if(id.startsWith('s1_')){
+      const meta = FIXTURE_S1.reduce((found,day)=>{
+        const m = day.matches.find(x=>x.id===id);
+        return m?{date:day.date,time:m.time,a:m.a[1],b:m.b[1]}:found;
+      }, null);
+      if(meta){ label=meta.date+' '+meta.time+'hs'; teamAName=meta.a; teamBName=meta.b; }
+    } else {
+      const fix=(data.fixtures||[]).find(f=>f.id===id);
+      if(fix){ label=fix.label||''; teamAName=fix.teamA; teamBName=fix.teamB; }
+    }
+
+    html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px">';
+    html += '<span style="color:var(--text3);min-width:70px;font-size:9px">'+label+'</span>';
+    html += '<span style="flex:1;text-align:right">'+teamAName+'</span>';
+    html += '<span style="font-weight:700;color:var(--blue);min-width:30px;text-align:center">'+pred.a+'–'+pred.b+'</span>';
+    html += '<span style="flex:1">'+teamBName+'</span>';
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
 }
 
 async function deletePlayer(name){
