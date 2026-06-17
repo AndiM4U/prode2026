@@ -1,8 +1,5 @@
 const { Redis } = require('@upstash/redis');
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-});
+const redis = Redis.fromEnv();
 const ORG_PASS = process.env.ORG_PASSWORD || 'mundial2026';
 
 module.exports = async function handler(req, res) {
@@ -30,20 +27,27 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'join') {
-      const { name } = req.body;
+      const { name, lastSeen } = req.body;
       if (!name) return res.status(400).json({ error: 'Nombre requerido' });
       const existing = await redis.hget('players', name);
-      if (!existing) {
-        await redis.hset('players', { [name]: JSON.stringify({ name, champ:'', goleador:'', joined: Date.now() }) });
-      }
-      const player = existing ? (typeof existing==='string' ? JSON.parse(existing) : existing) : { name, champ:'', goleador:'' };
-      return res.json({ ok:true, player });
+      const existingData = existing ? (typeof existing==='string' ? JSON.parse(existing) : existing) : null;
+      const updated = {
+        name,
+        champ: existingData?.champ || '',
+        goleador: existingData?.goleador || '',
+        joined: existingData?.joined || Date.now(),
+        lastSeen: lastSeen || Date.now()
+      };
+      await redis.hset('players', { [name]: JSON.stringify(updated) });
+      return res.json({ ok:true, player: updated });
     }
 
     if (action === 'save-player') {
       const { name, champ, goleador } = req.body;
       if (!name) return res.status(400).json({ error: 'Nombre requerido' });
-      await redis.hset('players', { [name]: JSON.stringify({ name, champ, goleador }) });
+      const existing = await redis.hget('players', name);
+      const existingData = existing ? (typeof existing==='string' ? JSON.parse(existing) : existing) : {};
+      await redis.hset('players', { [name]: JSON.stringify({ ...existingData, name, champ, goleador }) });
       return res.json({ ok:true });
     }
 
