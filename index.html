@@ -414,11 +414,14 @@ function normalizeName(raw){
 
 async function doLogin(){
   const rawName=document.getElementById('l-name').value;
-  const name=normalizeName(rawName);
+  const typedName=normalizeName(rawName);
   const pass=document.getElementById('l-pass').value.trim();
-  if(!name){toast('t-login','⚠️ Ingresá tu nombre');return;}
-  const r=await api('join',{name,pass,lastSeen:Date.now()});
+  if(!typedName){toast('t-login','⚠️ Ingresá tu nombre');return;}
+  const r=await api('join',{name:typedName,pass,lastSeen:Date.now()});
   if(r.error){toast('t-login','❌ '+r.error);return;}
+  // IMPORTANT: use the name returned by the server (preserves existing player's
+  // original casing/spelling so predictions match correctly)
+  const name = r.player && r.player.name ? r.player.name : typedName;
   user=name; isOrg=!!pass; orgPass=pass;
   await loadAll();
   // Load personal preds BEFORE rendering inputs
