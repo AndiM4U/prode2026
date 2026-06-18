@@ -29,16 +29,35 @@ module.exports = async function handler(req, res) {
     if (action === 'join') {
       const { name, lastSeen } = req.body;
       if (!name) return res.status(400).json({ error: 'Nombre requerido' });
-      const existing = await redis.hget('players', name);
-      const existingData = existing ? (typeof existing==='string' ? JSON.parse(existing) : existing) : null;
+
+      // Case-insensitive lookup: find existing player ignoring case/spacing
+      const allPlayers = await redis.hgetall('players') || {};
+      const normalizedInput = name.trim().toLowerCase().replace(/\s+/g,' ');
+      let matchedKey = null;
+      let existingData = null;
+      for (const key of Object.keys(allPlayers)) {
+        const normalizedKey = key.trim().toLowerCase().replace(/\s+/g,' ');
+        if (normalizedKey === normalizedInput) {
+          matchedKey = key;
+          const raw = allPlayers[key];
+          existingData = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          break;
+        }
+      }
+
+      // Use the EXISTING stored name if found (preserves original casing/predictions),
+      // otherwise use the newly provided name
+      const finalName = matchedKey || name;
+
       const updated = {
-        name,
+        name: finalName,
         champ: existingData?.champ || '',
         goleador: existingData?.goleador || '',
         joined: existingData?.joined || Date.now(),
         lastSeen: lastSeen || Date.now()
       };
-      await redis.hset('players', { [name]: JSON.stringify(updated) });
+
+      await redis.hset('players', { [finalName]: JSON.stringify(updated) });
       return res.json({ ok:true, player: updated });
     }
 
