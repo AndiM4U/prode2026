@@ -1251,9 +1251,8 @@ function renderPlayerPredsDetail(name){
   const entries = Object.entries(preds);
   if(!entries.length) return '<div style="padding:8px 0 12px 46px;font-size:11px;color:var(--text3)">Sin pronósticos cargados</div>';
 
-  let html = '<div style="padding:6px 0 12px 0;background:var(--bg2);border-radius:var(--r);margin-bottom:6px">';
-  html += '<div style="font-size:10px;color:var(--text2);padding:6px 12px;font-weight:600">Pronósticos cargados (' + entries.length + ')</div>';
-
+  // Build rows with full info: label, teams, prediction, official result, points
+  const rows = [];
   entries.forEach(([id,predRaw])=>{
     let pred;
     try{ pred = typeof predRaw==='string'?JSON.parse(predRaw):predRaw; }catch(e){ return; }
@@ -1261,22 +1260,55 @@ function renderPlayerPredsDetail(name){
 
     let label = id;
     let teamAName='', teamBName='';
+    let sortKey = '';
     if(id.startsWith('s1_')){
       const meta = FIXTURE_S1.reduce((found,day)=>{
         const m = day.matches.find(x=>x.id===id);
         return m?{date:day.date,time:m.time,a:m.a[1],b:m.b[1]}:found;
       }, null);
-      if(meta){ label=meta.date+' '+meta.time+'hs'; teamAName=meta.a; teamBName=meta.b; }
+      if(meta){ label=meta.date+' '+meta.time+'hs'; teamAName=meta.a; teamBName=meta.b; sortKey=meta.date+meta.time; }
     } else {
       const fix=(data.fixtures||[]).find(f=>f.id===id);
       if(fix){ label=fix.label||''; teamAName=fix.teamA; teamBName=fix.teamB; }
     }
 
-    html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px">';
-    html += '<span style="color:var(--text3);min-width:70px;font-size:9px">'+label+'</span>';
-    html += '<span style="flex:1;text-align:right">'+teamAName+'</span>';
-    html += '<span style="font-weight:700;color:var(--blue);min-width:30px;text-align:center">'+pred.a+'–'+pred.b+'</span>';
-    html += '<span style="flex:1">'+teamBName+'</span>';
+    // Official result + points, using the SAME centralized logic as player view
+    const rv = data.results[id];
+    let resultStr = '–';
+    let ptsStr = '–';
+    let ptsColor = 'var(--text3)';
+    let ptsBg = 'transparent';
+    if(rv){
+      const res = typeof rv==='string'?JSON.parse(rv):rv;
+      const pa = parseInt(pred.a), pb = parseInt(pred.b);
+      if(!isNaN(pa) && !isNaN(pb)){
+        const calc = calcMatchPts(id, pa, pb, res);
+        resultStr = calc.resSa+'–'+calc.resSb;
+        ptsStr = calc.pts+'pts';
+        ptsColor = calc.pts===3?'var(--green)':calc.pts===1?'var(--amber)':'var(--red)';
+        ptsBg = calc.pts===3?'var(--green2)':calc.pts===1?'var(--amber2)':'var(--red2)';
+      }
+    } else {
+      resultStr = 'sin jugar';
+    }
+
+    rows.push({ id, label, teamAName, teamBName, predStr: pred.a+'–'+pred.b, resultStr, ptsStr, ptsColor, ptsBg, sortKey });
+  });
+
+  // Sort by date/time when available (S1 matches), keep others at end
+  rows.sort((a,b)=> (a.sortKey||'zzz').localeCompare(b.sortKey||'zzz'));
+
+  let html = '<div style="padding:6px 0 12px 0;background:var(--bg2);border-radius:var(--r);margin-bottom:6px">';
+  html += '<div style="font-size:10px;color:var(--text2);padding:6px 12px;font-weight:600">Pronósticos cargados (' + rows.length + ')</div>';
+
+  rows.forEach(r=>{
+    html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px;border-bottom:0.5px solid var(--border)">';
+    html += '<span style="color:var(--text3);min-width:62px;font-size:9px">'+r.label+'</span>';
+    html += '<span style="flex:1;text-align:right">'+r.teamAName+'</span>';
+    html += '<span style="font-weight:700;color:var(--blue);min-width:34px;text-align:center" title="Pronóstico">'+r.predStr+'</span>';
+    html += '<span style="flex:1">'+r.teamBName+'</span>';
+    html += '<span style="color:var(--text2);font-size:9px;min-width:48px;text-align:center" title="Resultado oficial">'+r.resultStr+'</span>';
+    html += '<span style="font-size:9px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+r.ptsBg+';color:'+r.ptsColor+';min-width:26px;text-align:center">'+r.ptsStr+'</span>';
     html += '</div>';
   });
 
