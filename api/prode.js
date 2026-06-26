@@ -13,8 +13,8 @@ module.exports = async function handler(req, res) {
     if (action === 'get-all') {
       const players = await redis.hgetall('players') || {};
       const results = await redis.hgetall('results') || {};
-      const config  = await redis.get('config') || { rc:'', rg:'', sections:{s1:true,s2:false} };
-      const fixtures2 = await redis.lrange('fixtures2', 0, -1) || [];
+      const config  = await redis.get('config') || { rc:'', rg:'', sections:{s1:true,s2:false,extra:false} };
+      const fixtures = await redis.lrange('fixtures2', 0, -1) || [];
       const matchKeys = await redis.smembers('match-keys') || [];
       const predictions = {};
       if (matchKeys.length) {
@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
           if (v) predictions[k.replace('preds:', '')] = v;
         }));
       }
-      return res.json({ players: players||{}, results: results||{}, config, fixtures2, predictions });
+      return res.json({ players: players||{}, results: results||{}, config, fixtures, predictions });
     }
 
     if (action === 'join') {
@@ -104,13 +104,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'add-fixture') {
-      const { pass, section, id, teamA, teamB, label, round } = req.body;
+      const { pass, section, id, teamA, teamB, label, slotKey } = req.body;
       if (pass !== ORG_PASS) return res.status(403).json({ error: 'Sin autorización' });
-      const key = 'fixtures' + section;
+      const key = 'fixtures' + (section||2);
       const existing = await redis.lrange(key, 0, -1) || [];
       const parsed = existing.map(x => typeof x==='string' ? JSON.parse(x) : x);
       if (!parsed.find(f => f.id === id)) {
-        await redis.rpush(key, JSON.stringify({ id, teamA, teamB, label, round: round||'r32' }));
+        await redis.rpush(key, JSON.stringify({ id, teamA, teamB, label, slotKey: slotKey||'' }));
       }
       return res.json({ ok:true });
     }
