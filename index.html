@@ -402,6 +402,22 @@ const FIXTURE_ELIM = [
   {round:'Final', slot:1, date:'Dom 19 Jul', time:'16:00'},
 ];
 
+// Build a name -> flag code lookup from all known teams (for elimination rounds
+// where teams are typed as free text instead of array indices)
+const TEAM_FLAGS = {};
+Object.values(GROUPS).forEach(teams=>{
+  teams.forEach(([code,name])=>{ TEAM_FLAGS[name.toLowerCase()] = code; });
+});
+function getFlagCode(teamName){
+  if(!teamName) return null;
+  return TEAM_FLAGS[teamName.toLowerCase().trim()] || null;
+}
+function flagImg(teamName){
+  const code = getFlagCode(teamName);
+  if(!code) return '';
+  return '<img src="https://flagcdn.com/16x12/'+code.toLowerCase()+'.png" onerror="this.style.display=\'none\'" style="vertical-align:middle;margin-right:3px">';
+}
+
 const COLORS=[['#E6F1FB','#0C447C'],['#EAF3DE','#27500A'],['#FAEEDA','#633806'],['#FBEAF0','#72243E'],['#E1F5EE','#085041'],['#FAECE7','#712B13'],['#EEEDFE','#3C3489'],['#FCEBEB','#791F1F'],['#F1EFE8','#444441'],['#E1F5EE','#04342C']];
 function gc(i){return COLORS[i%COLORS.length];}
 function ini(n){return n.trim().split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');}
@@ -748,11 +764,11 @@ function renderS2Inputs(){
     try{const v=myPreds[id]?JSON.parse(myPreds[id]):{};pa=v.a||'';pb=v.b||'';}catch(e){}
     return `<div style="font-size:11px;color:var(--text2);padding-top:6px;font-weight:500">${f.label||''}</div>
     <div class="mrow">
-      <div class="tr">${f.teamA}</div>
+      <div class="tr">${flagImg(f.teamA)}${f.teamA}</div>
       <input class="sbox" type="number" min="0" max="20" value="${pa}" placeholder="–" data-id="${id}" data-s="a" oninput="setPred(this)">
       <span style="color:var(--text3);font-size:14px">–</span>
       <input class="sbox" type="number" min="0" max="20" value="${pb}" placeholder="–" data-id="${id}" data-s="b" oninput="setPred(this)">
-      <div class="tl">${f.teamB}</div>
+      <div class="tl">${flagImg(f.teamB)}${f.teamB}</div>
     </div>`;
   }).join('')+'</div>';
 }
@@ -982,9 +998,9 @@ function renderPlayerResults(){
       html+='<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">';
       html+='<div style="font-size:10px;color:var(--text2);margin-bottom:3px">'+label+'</div>';
       html+='<div style="display:flex;align-items:center;gap:6px">';
-      html+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+res.teamA+'</span>';
+      html+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+flagImg(res.teamA)+res.teamA+'</span>';
       html+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+res.sa+'–'+res.sb+'</span>';
-      html+='<span style="font-size:12px;font-weight:600;flex:1">'+res.teamB+'</span>';
+      html+='<span style="font-size:12px;font-weight:600;flex:1">'+flagImg(res.teamB)+res.teamB+'</span>';
       if(pa!==''){
         html+='<span style="font-size:10px;color:var(--text3)">'+pa+'–'+pb+'</span>';
         html+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+pts+'pts</span>';
@@ -1122,7 +1138,7 @@ function renderElimResults(){
     const done=sa!==''&&sa!==undefined;
     html+=`<div style="font-size:11px;color:var(--text2);padding-top:6px;font-weight:500">${f.label||''}</div>
     <div style="display:grid;grid-template-columns:1fr 36px auto 36px 1fr auto;align-items:center;gap:4px;padding:6px 0;border-bottom:0.5px solid var(--border)">
-      <div style="text-align:right;font-size:12px;font-weight:500">${f.teamA}</div>
+      <div style="text-align:right;font-size:12px;font-weight:500">${flagImg(f.teamA)}${f.teamA}</div>
       <input type="number" min="0" max="20" placeholder="–" value="${done?sa:''}"
         style="width:36px;height:34px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'var(--bg2)'};color:var(--text);font-size:15px;font-weight:600"
         oninput="stageRes('${f.id}','${f.teamA}','${f.teamB}','sa',this.value)">
@@ -1130,7 +1146,7 @@ function renderElimResults(){
       <input type="number" min="0" max="20" placeholder="–" value="${done?sb:''}"
         style="width:36px;height:34px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'var(--bg2)'};color:var(--text);font-size:15px;font-weight:600"
         oninput="stageRes('${f.id}','${f.teamA}','${f.teamB}','sb',this.value)">
-      <div style="font-size:12px;font-weight:500">${f.teamB}</div>
+      <div style="font-size:12px;font-weight:500">${flagImg(f.teamB)}${f.teamB}</div>
       <button style="font-size:10px;padding:3px 7px;border-radius:5px;border:0.5px solid ${done?'var(--teal)':'var(--border2)'};background:${done?'var(--teal2)':'transparent'};color:${done?'var(--teal)':'var(--text2)'};cursor:pointer"
         onclick="saveResElim('${f.id}','${f.teamA}','${f.teamB}')">${done?'✓':'OK'}</button>
     </div>`;
@@ -1215,7 +1231,7 @@ function renderCrucesList(){
     return `<div class="fcard">
       <div style="flex:1">
         <div style="font-size:11px;color:var(--text2)">${f.label||''}${timeLabel?' · '+timeLabel:''}</div>
-        <div style="font-size:13px;font-weight:500">${f.teamA} vs ${f.teamB}</div>
+        <div style="font-size:13px;font-weight:500">${flagImg(f.teamA)}${f.teamA} vs ${f.teamB} ${flagImg(f.teamB)}</div>
       </div>
       <button class="btn-sm" onclick="deleteFixture('${f.id}')">✕</button>
     </div>`;
@@ -1419,9 +1435,9 @@ function renderPlayerPredsDetail(name){
   rows.forEach(r=>{
     html += '<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:11px;border-bottom:0.5px solid var(--border)">';
     html += '<span style="color:var(--text3);min-width:62px;font-size:9px">'+r.label+'</span>';
-    html += '<span style="flex:1;text-align:right">'+r.teamAName+'</span>';
+    html += '<span style="flex:1;text-align:right">'+flagImg(r.teamAName)+r.teamAName+'</span>';
     html += '<span style="font-weight:700;color:var(--blue);min-width:34px;text-align:center" title="Pronóstico">'+r.predStr+'</span>';
-    html += '<span style="flex:1">'+r.teamBName+'</span>';
+    html += '<span style="flex:1">'+flagImg(r.teamBName)+r.teamBName+'</span>';
     html += '<span style="color:var(--text2);font-size:9px;min-width:48px;text-align:center" title="Resultado oficial">'+r.resultStr+'</span>';
     html += '<span style="font-size:9px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+r.ptsBg+';color:'+r.ptsColor+';min-width:26px;text-align:center">'+r.ptsStr+'</span>';
     html += '</div>';
