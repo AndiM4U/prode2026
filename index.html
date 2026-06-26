@@ -258,12 +258,17 @@ input:checked + .sw-track::after{transform:translateX(20px)}
 
   <div id="o-cruces" class="sec">
     <div class="card">
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px">Agregar cruce eliminatorio</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Agregar cruce eliminatorio</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Elegí la ronda y el partido — la fecha/hora oficial se asigna sola y el cruce se bloquea automáticamente cuando arranca.</div>
+      <div class="ig"><label>Ronda y partido</label>
+        <select id="f-slot" onchange="onSlotChange()" style="width:100%;height:42px;padding:0 12px;border-radius:var(--r);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:14px">
+        </select>
+      </div>
+      <div id="f-slot-time" style="font-size:11px;color:var(--blue);margin-bottom:10px;font-weight:600"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div class="ig" style="margin:0"><label>Equipo A</label><input id="f-a" type="text" placeholder="Ej: Argentina"></div>
         <div class="ig" style="margin:0"><label>Equipo B</label><input id="f-b" type="text" placeholder="Ej: Francia"></div>
       </div>
-      <div class="ig"><label>Etiqueta</label><input id="f-label" type="text" placeholder="Ej: Octavos 1, Cuartos 2, Semifinal 1, Final"></div>
       <button class="btn btn-blue" onclick="addFixture()">Agregar cruce</button>
       <div id="t-cruces" class="toast"></div>
     </div>
@@ -351,6 +356,50 @@ const FIXTURE_S1 = [
   {date:'Jue 25 Jun',matches:[{id:'s1_E_0_3',g:'E',a:['DE','Alemania'],b:['EC','Ecuador'],time:'17:00'},{id:'s1_E_1_2',g:'E',a:['CW','Curaçao'],b:['CI','Costa de Marfil'],time:'17:00'},{id:'s1_F_0_3',g:'F',a:['NL','Países Bajos'],b:['TN','Túnez'],time:'20:00'},{id:'s1_F_1_2',g:'F',a:['JP','Japón'],b:['SE','Suecia'],time:'20:00'},{id:'s1_D_0_3',g:'D',a:['US','EE.UU.'],b:['TR','Turquía'],time:'23:00'},{id:'s1_D_1_2',g:'D',a:['PY','Paraguay'],b:['AU','Australia'],time:'23:00'}]},
   {date:'Vie 26 Jun',matches:[{id:'s1_I_0_3',g:'I',a:['FR','Francia'],b:['NO','Noruega'],time:'16:00'},{id:'s1_I_1_2',g:'I',a:['SN','Senegal'],b:['IQ','Irak'],time:'16:00'},{id:'s1_H_0_3',g:'H',a:['ES','España'],b:['UY','Uruguay'],time:'21:00'},{id:'s1_H_1_2',g:'H',a:['CV','Cabo Verde'],b:['SA','Arabia Saudí'],time:'21:00'}]},
   {date:'Sáb 27 Jun',matches:[{id:'s1_G_0_3',g:'G',a:['BE','Bélgica'],b:['NZ','Nueva Zelanda'],time:'00:00'},{id:'s1_G_1_2',g:'G',a:['EG','Egipto'],b:['IR','Irán'],time:'00:00'},{id:'s1_L_0_3',g:'L',a:['GB-ENG','Inglaterra'],b:['PA','Panamá'],time:'18:00'},{id:'s1_L_1_2',g:'L',a:['HR','Croacia'],b:['GH','Ghana'],time:'18:00'},{id:'s1_K_0_3',g:'K',a:['PT','Portugal'],b:['CO','Colombia'],time:'20:30'},{id:'s1_K_1_2',g:'K',a:['CD','DR Congo'],b:['UZ','Uzbekistán'],time:'20:30'},{id:'s1_J_0_3',g:'J',a:['AR','Argentina'],b:['JO','Jordania'],time:'23:00'},{id:'s1_J_1_2',g:'J',a:['DZ','Argelia'],b:['AT','Austria'],time:'23:00'}]}
+];
+
+// FIXTURE_ELIM: official elimination round slots with fixed date/time (ARG).
+// Each slot is a "placeholder" the organizer fills in with real teams once known.
+// Date/time NEVER changes - only teamA/teamB get assigned when confirming a matchup.
+const FIXTURE_ELIM = [
+  // Dieciseisavos (Round of 32) - 16 partidos
+  {round:'Dieciseisavos', slot:1, date:'Dom 28 Jun', time:'16:00'},
+  {round:'Dieciseisavos', slot:2, date:'Lun 29 Jun', time:'14:00'},
+  {round:'Dieciseisavos', slot:3, date:'Lun 29 Jun', time:'17:30'},
+  {round:'Dieciseisavos', slot:4, date:'Lun 29 Jun', time:'22:00'},
+  {round:'Dieciseisavos', slot:5, date:'Mar 30 Jun', time:'14:00'},
+  {round:'Dieciseisavos', slot:6, date:'Mar 30 Jun', time:'18:00'},
+  {round:'Dieciseisavos', slot:7, date:'Mar 30 Jun', time:'22:00'},
+  {round:'Dieciseisavos', slot:8, date:'Mié 1 Jul', time:'13:00'},
+  {round:'Dieciseisavos', slot:9, date:'Mié 1 Jul', time:'17:00'},
+  {round:'Dieciseisavos', slot:10, date:'Mié 1 Jul', time:'21:00'},
+  {round:'Dieciseisavos', slot:11, date:'Jue 2 Jul', time:'16:00'},
+  {round:'Dieciseisavos', slot:12, date:'Jue 2 Jul', time:'20:00'},
+  {round:'Dieciseisavos', slot:13, date:'Vie 3 Jul', time:'00:00'},
+  {round:'Dieciseisavos', slot:14, date:'Vie 3 Jul', time:'15:00'},
+  {round:'Dieciseisavos', slot:15, date:'Vie 3 Jul', time:'19:00'},
+  {round:'Dieciseisavos', slot:16, date:'Vie 3 Jul', time:'22:30'},
+  // Octavos de final - 8 partidos
+  {round:'Octavos', slot:1, date:'Sáb 4 Jul', time:'14:00'},
+  {round:'Octavos', slot:2, date:'Sáb 4 Jul', time:'18:00'},
+  {round:'Octavos', slot:3, date:'Dom 5 Jul', time:'17:00'},
+  {round:'Octavos', slot:4, date:'Dom 5 Jul', time:'21:00'},
+  {round:'Octavos', slot:5, date:'Lun 6 Jul', time:'16:00'},
+  {round:'Octavos', slot:6, date:'Lun 6 Jul', time:'21:00'},
+  {round:'Octavos', slot:7, date:'Mar 7 Jul', time:'13:00'},
+  {round:'Octavos', slot:8, date:'Mar 7 Jul', time:'17:00'},
+  // Cuartos de final - 4 partidos
+  {round:'Cuartos', slot:1, date:'Jue 9 Jul', time:'17:00'},
+  {round:'Cuartos', slot:2, date:'Vie 10 Jul', time:'16:00'},
+  {round:'Cuartos', slot:3, date:'Sáb 11 Jul', time:'18:00'},
+  {round:'Cuartos', slot:4, date:'Sáb 11 Jul', time:'22:00'},
+  // Semifinales - 2 partidos
+  {round:'Semifinal', slot:1, date:'Mar 14 Jul', time:'16:00'},
+  {round:'Semifinal', slot:2, date:'Mié 15 Jul', time:'16:00'},
+  // Tercer puesto
+  {round:'Tercer puesto', slot:1, date:'Sáb 18 Jul', time:'18:00'},
+  // Final
+  {round:'Final', slot:1, date:'Dom 19 Jul', time:'16:00'},
 ];
 
 const COLORS=[['#E6F1FB','#0C447C'],['#EAF3DE','#27500A'],['#FAEEDA','#633806'],['#FBEAF0','#72243E'],['#E1F5EE','#085041'],['#FAECE7','#712B13'],['#EEEDFE','#3C3489'],['#FCEBEB','#791F1F'],['#F1EFE8','#444441'],['#E1F5EE','#04342C']];
@@ -462,6 +511,7 @@ async function loadAll(){
   renderPositionBanner();
   renderElimResults();
   renderCrucesList();
+  populateSlotSelector();
   renderOrgPlayers();
   renderS2Inputs();
   updateSectionAccess();
@@ -708,29 +758,55 @@ function renderS2Inputs(){
 }
 
 // ── TIME LOCK ────────────────────────────────────────────────────
-const MATCH_TIMES = {};
 const _MONTHS = {'Ene':1,'Feb':2,'Mar':3,'Abr':4,'May':5,'Jun':6,'Jul':7,'Ago':8,'Sep':9,'Oct':10,'Nov':11,'Dic':12};
+
+// Convert an Argentina date string ('Dom 28 Jun') + time ('16:00') to a UTC timestamp.
+// Centralized so both group-stage and elimination fixtures use identical logic.
+function argDateTimeToUTC(dateStr, timeStr){
+  const parts = dateStr.split(' ');
+  const dd = parseInt(parts[1]);
+  const month = _MONTHS[parts[2]]||6;
+  const tp = timeStr.split(':').map(Number);
+  let utcH = tp[0] + 3;
+  let utcD = dd;
+  if(utcH >= 24){ utcH -= 24; utcD += 1; }
+  return Date.UTC(2026, month-1, utcD, utcH, tp[1], 0);
+}
+
+const MATCH_TIMES = {};
 FIXTURE_S1.forEach(day=>{
   day.matches.forEach(m=>{
-    // Parse Argentina date/time and convert to UTC explicitly
-    const parts = day.date.split(' ');
-    const dd = parseInt(parts[1]);
-    const month = _MONTHS[parts[2]]||6;
-    const tp = m.time.split(':').map(Number);
-    // ARG = UTC-3, so UTC hour = ARG hour + 3
-    // Handle day overflow (e.g. 23:00 ARG + 3 = 02:00 UTC next day)
-    let utcH = tp[0] + 3;
-    let utcD = dd;
-    if(utcH >= 24){ utcH -= 24; utcD += 1; }
-    // Use Date.UTC for timezone-independent calculation
-    MATCH_TIMES[m.id] = Date.UTC(2026, month-1, utcD, utcH, tp[1], 0);
+    MATCH_TIMES[m.id] = argDateTimeToUTC(day.date, m.time);
   });
 });
 
+// Lookup table for elimination round slots: 'Dieciseisavos-1' -> {date,time,utcMs}
+const ELIM_SLOTS = {};
+FIXTURE_ELIM.forEach(s=>{
+  const key = s.round+'-'+s.slot;
+  ELIM_SLOTS[key] = { date:s.date, time:s.time, utcMs: argDateTimeToUTC(s.date, s.time) };
+});
+
 function isMatchLocked(id){
-  const t = MATCH_TIMES[id];
+  // Group stage matches: time is fixed in MATCH_TIMES
+  let t = MATCH_TIMES[id];
+  if(!t){
+    // Elimination matches: look up the fixture's assigned slot time
+    const fix = (data.fixtures||[]).find(f=>f.id===id);
+    if(fix && fix.slotKey && ELIM_SLOTS[fix.slotKey]){
+      t = ELIM_SLOTS[fix.slotKey].utcMs;
+    }
+  }
   if(!t) return false;
   return Date.now() >= t;
+}
+
+function getElimMatchTime(id){
+  const fix = (data.fixtures||[]).find(f=>f.id===id);
+  if(fix && fix.slotKey && ELIM_SLOTS[fix.slotKey]){
+    return ELIM_SLOTS[fix.slotKey];
+  }
+  return null;
 }
 
 function getArgTime(id){
@@ -1075,16 +1151,45 @@ async function saveResElim(id,teamA,teamB){
 }
 
 // ── CRUCES ───────────────────────────────────────────────────────
+function populateSlotSelector(){
+  const sel = document.getElementById('f-slot');
+  if(!sel) return;
+  const usedSlots = new Set((data.fixtures||[]).map(f=>f.slotKey).filter(Boolean));
+  let html = '';
+  let currentRound = '';
+  FIXTURE_ELIM.forEach(s=>{
+    const key = s.round+'-'+s.slot;
+    const taken = usedSlots.has(key);
+    const optLabel = s.round+' #'+s.slot+' — '+s.date+' '+s.time+'hs'+(taken?' (ya confirmado)':'');
+    html += '<option value="'+key+'"'+(taken?' style="color:var(--text3)"':'')+'>'+optLabel+'</option>';
+  });
+  sel.innerHTML = html;
+  onSlotChange();
+}
+
+function onSlotChange(){
+  const sel = document.getElementById('f-slot');
+  const timeEl = document.getElementById('f-slot-time');
+  if(!sel || !timeEl) return;
+  const key = sel.value;
+  const slot = ELIM_SLOTS[key];
+  if(slot) timeEl.textContent = '🕐 Se bloqueará el ' + slot.date + ' a las ' + slot.time + 'hs (ARG)';
+}
+
 async function addFixture(){
   const a=document.getElementById('f-a').value.trim();
   const b=document.getElementById('f-b').value.trim();
-  const label=document.getElementById('f-label').value.trim();
+  const slotKey=document.getElementById('f-slot').value;
   if(!a||!b){toast('t-cruces','⚠️ Ingresá los dos equipos');return;}
-  const id=`s2_${a}_${b}_${Date.now()}`.replace(/\s/g,'_').toLowerCase();
-  await api('add-fixture',{pass:orgPass,section:2,id,teamA:a,teamB:b,label});
-  document.getElementById('f-a').value='';document.getElementById('f-b').value='';document.getElementById('f-label').value='';
+  if(!slotKey){toast('t-cruces','⚠️ Elegí la ronda y el partido');return;}
+  const slotInfo = ELIM_SLOTS[slotKey];
+  const label = slotKey.replace('-',' #');
+  const id = ('s2_'+slotKey).replace(/\s/g,'_').toLowerCase();
+  await api('add-fixture',{pass:orgPass,section:2,id,teamA:a,teamB:b,label,slotKey});
+  document.getElementById('f-a').value='';document.getElementById('f-b').value='';
   await loadAll();
-  toast('t-cruces',`✅ ${a} vs ${b} agregado`);
+  populateSlotSelector();
+  toast('t-cruces',`✅ ${a} vs ${b} agregado · se bloquea ${slotInfo.date} ${slotInfo.time}hs`);
 }
 
 async function deleteFixture(id){
@@ -1097,14 +1202,24 @@ function renderCrucesList(){
   if(!el) return;
   const fixtures=data.fixtures||[];
   if(!fixtures.length){el.innerHTML='<div class="empty">Sin cruces aún</div>';return;}
-  el.innerHTML=fixtures.map(f=>`
-    <div class="fcard">
+  // Sort by scheduled time
+  const sorted = [...fixtures].sort((a,b)=>{
+    const ta = a.slotKey && ELIM_SLOTS[a.slotKey] ? ELIM_SLOTS[a.slotKey].utcMs : 0;
+    const tb = b.slotKey && ELIM_SLOTS[b.slotKey] ? ELIM_SLOTS[b.slotKey].utcMs : 0;
+    return ta - tb;
+  });
+  el.innerHTML=sorted.map(f=>{
+    const slot = f.slotKey ? ELIM_SLOTS[f.slotKey] : null;
+    const locked = f.slotKey && slot && Date.now() >= slot.utcMs;
+    const timeLabel = slot ? slot.date+' '+slot.time+'hs'+(locked?' 🔒':'') : '';
+    return `<div class="fcard">
       <div style="flex:1">
-        <div style="font-size:11px;color:var(--text2)">${f.label||''}</div>
+        <div style="font-size:11px;color:var(--text2)">${f.label||''}${timeLabel?' · '+timeLabel:''}</div>
         <div style="font-size:13px;font-weight:500">${f.teamA} vs ${f.teamB}</div>
       </div>
       <button class="btn-sm" onclick="deleteFixture('${f.id}')">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ── CLASSIFIED ───────────────────────────────────────────────────
