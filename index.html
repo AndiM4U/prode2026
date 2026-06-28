@@ -1494,16 +1494,33 @@ function getTeamStats(teamCode,g){
   const teams=GROUPS[g];
   const idx=teams.findIndex(t=>t[0]===teamCode);
   if(idx===-1) return null;
+  const teamName = teams[idx][1];
   let pts=0,gf=0,ga=0,played=0;
+  const normalize = s => (s||'').toLowerCase().trim();
   Object.entries(data.results||{}).forEach(([id,rv])=>{
     if(!id.startsWith('s1_'+g+'_')) return;
     const res=typeof rv==='string'?JSON.parse(rv):rv;
     const parts=id.replace('s1_'+g+'_','').split('_');
     const iA=parseInt(parts[0]),iB=parseInt(parts[1]);
-    if(iA===idx){played++;gf+=res.sa;ga+=res.sb;if(res.sa>res.sb)pts+=3;else if(res.sa===res.sb)pts+=1;}
-    else if(iB===idx){played++;gf+=res.sb;ga+=res.sa;if(res.sb>res.sa)pts+=3;else if(res.sa===res.sb)pts+=1;}
+    // Determine which actual saved field (sa/sb) corresponds to THIS team by
+    // matching team NAMES, not blindly trusting the id's index order — the
+    // organizer may have entered teamA/teamB in reverse order vs the fixture.
+    const teamAIsThis = normalize(res.teamA) === normalize(teamName);
+    const teamBIsThis = normalize(res.teamB) === normalize(teamName);
+    if(iA!==idx && iB!==idx) return; // this match doesn't involve this team at all
+    if(teamAIsThis){
+      played++; gf+=res.sa; ga+=res.sb;
+      if(res.sa>res.sb) pts+=3; else if(res.sa===res.sb) pts+=1;
+    } else if(teamBIsThis){
+      played++; gf+=res.sb; ga+=res.sa;
+      if(res.sb>res.sa) pts+=3; else if(res.sa===res.sb) pts+=1;
+    } else {
+      // Fallback: names didn't match (shouldn't normally happen) — use index order.
+      if(iA===idx){played++;gf+=res.sa;ga+=res.sb;if(res.sa>res.sb)pts+=3;else if(res.sa===res.sb)pts+=1;}
+      else if(iB===idx){played++;gf+=res.sb;ga+=res.sa;if(res.sb>res.sa)pts+=3;else if(res.sa===res.sb)pts+=1;}
+    }
   });
-  return{code:teamCode,name:teams[idx][1],pts,gf,ga,gd:gf-ga,played};
+  return{code:teamCode,name:teamName,pts,gf,ga,gd:gf-ga,played};
 }
 
 let suggestedFixtures2=[];
