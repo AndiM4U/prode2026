@@ -559,9 +559,8 @@ function getMatchTeamNames(id){
 // Normalizes the result's team order to match the prediction's a/b order
 // (based on the fixture), so goals are always compared for the SAME team
 // regardless of how the organizer typed teamA/teamB when saving the result.
-function calcMatchPts(id, pa, pb, res){
+function calcMatchPts(id, pa, pb, res, predWinner){
   let resSa = res.sa, resSb = res.sb;
-  let teamAWasSwapped = false;
   const matchTeams = getMatchTeamNames(id);
   if(matchTeams){
     const normalize = s => (s||'').toLowerCase().trim();
@@ -569,32 +568,52 @@ function calcMatchPts(id, pa, pb, res){
     const resAisFixtureB = normalize(res.teamA) === normalize(matchTeams.bName);
     if(resAisFixtureB && !resAisFixtureA){
       resSa = res.sb; resSb = res.sa;
-      teamAWasSwapped = true;
     }
   }
   let pts = 0;
-  const pw = pa>pb?'A':pa<pb?'B':'X';
   const exactMatch90 = (pa===resSa && pb===resSb);
+  const pw = pa>pb?'A':pa<pb?'B':'X'; // player's pick implied by their own 90-min score
+  const realIsDraw = (resSa===resSb);
+  // Distinguish group-stage (s1_) from elimination (s2_) matches by id prefix —
+  // this is the same convention used everywhere else in the app, and is more
+  // reliable than checking the "winner" field, since that field can be present
+  // (even if empty) on any saved result regardless of stage.
+  const isEliminationMatch = id.startsWith('s2_');
 
-  if(exactMatch90){
-    // Exact 90-minute score always earns the full 3 points (1 for outcome + 2 for exact),
-    // regardless of penalties/who advances — matching what happened on the pitch in 90'.
-    pts = 3;
-  } else if(resSa===resSb){
-    // Draw after 90 minutes (elimination match) but NOT predicted exactly.
-    // The only remaining way to score is correctly picking who advances after
-    // extra time/penalties (1pt). Predicting a plain (inexact) draw earns nothing.
+  if(!isEliminationMatch){
+    // GROUP STAGE (unchanged): standard 1pt winner/draw + 2pt exact bonus.
+    const rw = resSa>resSb?'A':resSa<resSb?'B':'X';
+    if(rw===pw) pts+=1;
+    if(exactMatch90) pts+=2;
+  } else if(!realIsDraw){
+    // Elimination match decided in 90' (no penalties needed): same as group stage.
+    const rw = resSa>resSb?'A':'B';
+    if(rw===pw) pts+=1;
+    if(exactMatch90) pts+=2;
+  } else {
+    // Elimination match that ended in a draw after 90' and was resolved by extra
+    // time/penalties. Two INDEPENDENT components, scored separately:
+    //
+    // 1) The 90-minute scoreline: 1pt for the exact draw score (e.g. predicted 1-1
+    //    and it was 1-1). Predicting "some draw" without matching the exact score
+    //    earns nothing here — only an exact match counts for this component.
+    // 2) Who actually advances: 1pt if the player's qualifier pick matches reality,
+    //    completely independent of whether their scoreline was right. Their pick
+    //    comes from predWinner if they themselves predicted a tie (since a tied
+    //    score alone doesn't indicate a side), or is implied directly by their
+    //    score if they predicted a clear winner instead.
+    if(exactMatch90) pts += 1;
+
     if(res.winner){
       const normalize = s => (s||'').toLowerCase().trim();
       const winnerIsFixtureA = matchTeams && normalize(res.winner) === normalize(matchTeams.aName);
       const winnerIsFixtureB = matchTeams && normalize(res.winner) === normalize(matchTeams.bName);
-      const penaltyWinnerSide = winnerIsFixtureA ? 'A' : (winnerIsFixtureB ? 'B' : null);
-      if(penaltyWinnerSide && pw===penaltyWinnerSide) pts+=1;
+      const realWinnerSide = winnerIsFixtureA ? 'A' : (winnerIsFixtureB ? 'B' : null);
+      const playerQualifierSide = (pw === 'X')
+        ? (predWinner ? (normalize(predWinner)===normalize(matchTeams?.aName||'') ? 'A' : (normalize(predWinner)===normalize(matchTeams?.bName||'') ? 'B' : null)) : null)
+        : pw;
+      if(realWinnerSide && playerQualifierSide && playerQualifierSide===realWinnerSide) pts += 1;
     }
-  } else {
-    // Normal (non-draw) match, not exact: standard "correct winner" logic.
-    const rw = resSa>resSb?'A':'B';
-    if(rw===pw) pts+=1;
   }
   return { pts, resSa, resSb };
 }
@@ -610,10 +629,10 @@ function calcPts(pName, secFilter){
     const res=typeof rv==='string'?JSON.parse(rv):rv;
     const pred=preds[id];
     if(!pred) return;
-    let pa,pb;
-    try{const pp=typeof pred==='string'?JSON.parse(pred):pred;pa=parseInt(pp.a);pb=parseInt(pp.b);}catch(e){return;}
+    let pa,pb,predWinner;
+    try{const pp=typeof pred==='string'?JSON.parse(pred):pred;pa=parseInt(pp.a);pb=parseInt(pp.b);predWinner=pp.winner||'';}catch(e){return;}
     if(isNaN(pa)||isNaN(pb)) return;
-    pts += calcMatchPts(id, pa, pb, res).pts;
+    pts += calcMatchPts(id, pa, pb, res, predWinner).pts;
   });
   return pts;
 }
@@ -776,17 +795,31 @@ function renderS1Inputs(){
 
 function renderElimInputRow(f){
   const id=f.id;
-  let pa='',pb='';
+  let pa='',pb='',pWinner='';
   try{
     const raw=myPreds[id];
     const v=raw?(typeof raw==='string'?JSON.parse(raw):raw):{};
-    pa=v.a||'';pb=v.b||'';
+    pa=v.a||'';pb=v.b||'';pWinner=v.winner||'';
   }catch(e){}
   const locked=isMatchLocked(id);
   const rowStyle=locked?'opacity:0.45;pointer-events:none':'';
   const lockMark=locked?' 🔒':'';
   let timeStr='';
   if(f.slotKey && ELIM_SLOTS[f.slotKey]) timeStr=ELIM_SLOTS[f.slotKey].date+' '+ELIM_SLOTS[f.slotKey].time+'hs';
+  // If the player's own prediction is a tie, ask who they think advances —
+  // this lets them still earn the 1pt "correct winner" point even if the
+  // exact 90-minute score isn't right, as long as 90'+ET+penalties pick is right.
+  const predIsDraw = pa!==''&&pb!==''&&parseInt(pa)===parseInt(pb);
+  const winnerSelector = predIsDraw ? `
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:4px 0 8px;font-size:10px;color:var(--text2)">
+      <span>⚽ Empate → ¿quién avanza?</span>
+      <select onchange="setPredWinner('${id}',this.value)" ${locked?'disabled':''}
+        style="font-size:11px;padding:3px 6px;border-radius:5px;border:0.5px solid var(--border2);background:${pWinner?'var(--green2)':'var(--bg2)'};color:var(--text)">
+        <option value="" ${!pWinner?'selected':''}>Elegir...</option>
+        <option value="${f.teamA}" ${pWinner===f.teamA?'selected':''}>${f.teamA}</option>
+        <option value="${f.teamB}" ${pWinner===f.teamB?'selected':''}>${f.teamB}</option>
+      </select>
+    </div>` : '';
   let html='<div style="padding:4px 0;border-bottom:0.5px solid var(--border)">';
   html+='<div style="font-size:10px;color:var(--text2);text-align:center;font-weight:500">'+(f.label||'')+'</div>';
   if(timeStr) html+='<div style="font-size:9px;color:var(--text3);text-align:center;margin-bottom:2px">'+timeStr+lockMark+'</div>';
@@ -796,7 +829,7 @@ function renderElimInputRow(f){
     +'<span style="color:var(--text3);font-size:14px">–</span>'
     +'<input class="sbox" type="number" min="0" max="20" value="'+pb+'" placeholder="–" data-id="'+id+'" data-s="b" oninput="setPred(this)" '+(locked?'disabled':'')+'>'
     +'<div class="tl">'+flagImg(f.teamB)+f.teamB+'</div>'
-    +'</div></div>';
+    +'</div>'+winnerSelector+'</div>';
   return html;
 }
 
@@ -891,16 +924,61 @@ function setPred(el){
     toast('t-s1','⛔ Este partido ya comenzó');
     return;
   }
-  let cur={a:'',b:''};
+  let cur={a:'',b:'',winner:''};
   try{
     const raw=myPreds[id];
-    cur=raw?(typeof raw==='string'?JSON.parse(raw):raw):{a:'',b:''};
+    cur=raw?(typeof raw==='string'?JSON.parse(raw):raw):{a:'',b:'',winner:''};
   }catch(e){}
   cur[s]=el.value;
+  // If the score is no longer a tie, clear any previously chosen winner —
+  // it's only relevant for tied scores.
+  if(cur.a!=='' && cur.b!=='' && parseInt(cur.a)!==parseInt(cur.b)){
+    cur.winner='';
+  }
+  myPreds[id]=JSON.stringify(cur);
+  // For elimination matches, re-render so the winner selector appears/disappears
+  // dynamically as the player edits a tied score, without losing input focus
+  // unnecessarily (only re-render if this is an s2_ match).
+  if(id.startsWith('s2_')){
+    const focusedId = el.dataset.id, focusedSide = el.dataset.s;
+    renderS2Inputs();
+    // Restore focus to the input the player was just typing in
+    const restored = document.querySelector('input[data-id="'+focusedId+'"][data-s="'+focusedSide+'"]');
+    if(restored) restored.focus();
+  }
+}
+
+function setPredWinner(id, winnerName){
+  if(isMatchLocked(id)) return;
+  let cur={a:'',b:'',winner:''};
+  try{
+    const raw=myPreds[id];
+    cur=raw?(typeof raw==='string'?JSON.parse(raw):raw):{a:'',b:'',winner:''};
+  }catch(e){}
+  cur.winner=winnerName;
   myPreds[id]=JSON.stringify(cur);
 }
 
 async function savePreds(sec){
+  // For elimination matches (sec===2), block saving if any tied prediction
+  // is missing the "who advances" pick — it's mandatory once the score is tied.
+  if(sec===2){
+    let missingWinner = [];
+    Object.entries(myPreds).forEach(([k,v])=>{
+      if(!k.startsWith('s2_')) return;
+      try{
+        const p=typeof v==='string'?JSON.parse(v):v;
+        if(p.a!=='' && p.b!=='' && parseInt(p.a)===parseInt(p.b) && !p.winner){
+          missingWinner.push(k);
+        }
+      }catch(e){}
+    });
+    if(missingWinner.length>0){
+      toast('t-s2','⚠️ Elegí quién avanza en los partidos donde pronosticaste empate');
+      return;
+    }
+  }
+
   // Get all existing preds from server first
   const existing = await api('get-preds',{name:user},'GET');
   const allPreds = existing.preds||{};
@@ -1033,16 +1111,16 @@ function renderPlayerResults(){
       const date = fix ? getFixtureDate(fix) : 'Sin fecha';
       const time = fix ? getFixtureTime(fix) : '';
       const pred=(data.predictions[user]||{})[id];
-      let pa='',pb='',pts=0;
+      let pa='',pb='',pts=0,predWinner='';
       try{
         const pp=pred?(typeof pred==='string'?JSON.parse(pred):pred):null;
-        if(pp){pa=String(pp.a||'');pb=String(pp.b||'');}
+        if(pp){pa=String(pp.a||'');pb=String(pp.b||'');predWinner=pp.winner||'';}
         if(pa!==''&&pb!==''){
-          const calc = calcMatchPts(id, parseInt(pa), parseInt(pb), res);
+          const calc = calcMatchPts(id, parseInt(pa), parseInt(pb), res, predWinner);
           pts = calc.pts;
         }
       }catch(e){}
-      return { id, res, label, date, time, pa, pb, pts, fix };
+      return { id, res, label, date, time, pa, pb, pts, fix, predWinner };
     });
     // Group by date
     const byDate = {};
@@ -1070,7 +1148,12 @@ function renderPlayerResults(){
         html+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+r.res.sa+'–'+r.res.sb+'</span>';
         html+='<span style="font-size:12px;font-weight:600;flex:1">'+flagImg(r.res.teamB)+r.res.teamB+'</span>';
         if(r.res.winner){
-          html+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">⚽ '+r.res.winner+' avanza por penales</span>';
+          html+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">⚽ '+r.res.winner+' avanza';
+          if(r.predWinner){
+            const matchedWinner = (r.predWinner.toLowerCase().trim() === r.res.winner.toLowerCase().trim());
+            html+=' · tu pronóstico: '+r.predWinner+(matchedWinner?' ✓':' ✗');
+          }
+          html+='</span>';
         }
         if(r.pa!==''){
           html+='<span style="font-size:10px;color:var(--text3)">'+r.pa+'–'+r.pb+'</span>';
@@ -1629,8 +1712,9 @@ function renderPlayerPredsDetail(name){
     if(rv){
       const res = typeof rv==='string'?JSON.parse(rv):rv;
       const pa = parseInt(pred.a), pb = parseInt(pred.b);
+      const predWinner = pred.winner||'';
       if(!isNaN(pa) && !isNaN(pb)){
-        const calc = calcMatchPts(id, pa, pb, res);
+        const calc = calcMatchPts(id, pa, pb, res, predWinner);
         resultStr = calc.resSa+'–'+calc.resSb;
         ptsStr = calc.pts+'pts';
         ptsColor = calc.pts===3?'var(--green)':calc.pts===1?'var(--amber)':'var(--red)';
