@@ -90,9 +90,9 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'add-result') {
-      const { pass, id, teamA, teamB, sa, sb } = req.body;
+      const { pass, id, teamA, teamB, sa, sb, winner } = req.body;
       if (pass !== ORG_PASS) return res.status(403).json({ error: 'Sin autorización' });
-      await redis.hset('results', { [id]: JSON.stringify({ id, teamA, teamB, sa: parseInt(sa), sb: parseInt(sb) }) });
+      await redis.hset('results', { [id]: JSON.stringify({ id, teamA, teamB, sa: parseInt(sa), sb: parseInt(sb), winner: winner||'' }) });
       return res.json({ ok:true });
     }
 
