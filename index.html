@@ -364,44 +364,44 @@ const FIXTURE_S1 = [
 // Each slot is a "placeholder" the organizer fills in with real teams once known.
 // Date/time NEVER changes - only teamA/teamB get assigned when confirming a matchup.
 const FIXTURE_ELIM = [
-  // Dieciseisavos (Round of 32) - 16 partidos
-  {round:'Dieciseisavos', slot:1, date:'Dom 28 Jun', time:'16:00'},
-  {round:'Dieciseisavos', slot:2, date:'Lun 29 Jun', time:'14:00'},
-  {round:'Dieciseisavos', slot:3, date:'Lun 29 Jun', time:'17:30'},
-  {round:'Dieciseisavos', slot:4, date:'Lun 29 Jun', time:'22:00'},
-  {round:'Dieciseisavos', slot:5, date:'Mar 30 Jun', time:'14:00'},
-  {round:'Dieciseisavos', slot:6, date:'Mar 30 Jun', time:'18:00'},
-  {round:'Dieciseisavos', slot:7, date:'Mar 30 Jun', time:'22:00'},
-  {round:'Dieciseisavos', slot:8, date:'Mié 1 Jul', time:'13:00'},
-  {round:'Dieciseisavos', slot:9, date:'Mié 1 Jul', time:'17:00'},
-  {round:'Dieciseisavos', slot:10, date:'Mié 1 Jul', time:'21:00'},
-  {round:'Dieciseisavos', slot:11, date:'Jue 2 Jul', time:'16:00'},
-  {round:'Dieciseisavos', slot:12, date:'Jue 2 Jul', time:'20:00'},
-  {round:'Dieciseisavos', slot:13, date:'Vie 3 Jul', time:'00:00'},
-  {round:'Dieciseisavos', slot:14, date:'Vie 3 Jul', time:'15:00'},
-  {round:'Dieciseisavos', slot:15, date:'Vie 3 Jul', time:'19:00'},
-  {round:'Dieciseisavos', slot:16, date:'Vie 3 Jul', time:'22:30'},
-  // Octavos de final - 8 partidos
-  {round:'Octavos', slot:1, date:'Sáb 4 Jul', time:'14:00'},
-  {round:'Octavos', slot:2, date:'Sáb 4 Jul', time:'18:00'},
-  {round:'Octavos', slot:3, date:'Dom 5 Jul', time:'17:00'},
-  {round:'Octavos', slot:4, date:'Dom 5 Jul', time:'21:00'},
-  {round:'Octavos', slot:5, date:'Lun 6 Jul', time:'16:00'},
-  {round:'Octavos', slot:6, date:'Lun 6 Jul', time:'21:00'},
-  {round:'Octavos', slot:7, date:'Mar 7 Jul', time:'13:00'},
-  {round:'Octavos', slot:8, date:'Mar 7 Jul', time:'17:00'},
-  // Cuartos de final - 4 partidos
-  {round:'Cuartos', slot:1, date:'Jue 9 Jul', time:'17:00'},
-  {round:'Cuartos', slot:2, date:'Vie 10 Jul', time:'16:00'},
-  {round:'Cuartos', slot:3, date:'Sáb 11 Jul', time:'18:00'},
-  {round:'Cuartos', slot:4, date:'Sáb 11 Jul', time:'22:00'},
-  // Semifinales - 2 partidos
-  {round:'Semifinal', slot:1, date:'Mar 14 Jul', time:'16:00'},
-  {round:'Semifinal', slot:2, date:'Mié 15 Jul', time:'16:00'},
-  // Tercer puesto
-  {round:'Tercer puesto', slot:1, date:'Sáb 18 Jul', time:'18:00'},
-  // Final
-  {round:'Final', slot:1, date:'Dom 19 Jul', time:'16:00'},
+  // Dieciseisavos (Round of 32) - 16 partidos, horarios oficiales en hora Argentina
+  {round:'Dieciseisavos', slot:1, match:73, date:'Dom 28 Jun', time:'16:00'},
+  {round:'Dieciseisavos', slot:2, match:74, date:'Lun 29 Jun', time:'17:30'},
+  {round:'Dieciseisavos', slot:3, match:75, date:'Lun 29 Jun', time:'22:00'},
+  {round:'Dieciseisavos', slot:4, match:76, date:'Lun 29 Jun', time:'14:00'},
+  {round:'Dieciseisavos', slot:5, match:77, date:'Mar 30 Jun', time:'18:00'},
+  {round:'Dieciseisavos', slot:6, match:78, date:'Mar 30 Jun', time:'14:00'},
+  {round:'Dieciseisavos', slot:7, match:79, date:'Mar 30 Jun', time:'22:00'},
+  {round:'Dieciseisavos', slot:8, match:80, date:'Mié 1 Jul', time:'13:00'},
+  {round:'Dieciseisavos', slot:9, match:81, date:'Mié 1 Jul', time:'21:00'},
+  {round:'Dieciseisavos', slot:10, match:82, date:'Mié 1 Jul', time:'17:00'},
+  {round:'Dieciseisavos', slot:11, match:83, date:'Jue 2 Jul', time:'20:00'},
+  {round:'Dieciseisavos', slot:12, match:84, date:'Jue 2 Jul', time:'16:00'},
+  {round:'Dieciseisavos', slot:13, match:85, date:'Vie 3 Jul', time:'00:00'},
+  {round:'Dieciseisavos', slot:14, match:86, date:'Vie 3 Jul', time:'19:00'},
+  {round:'Dieciseisavos', slot:15, match:87, date:'Vie 3 Jul', time:'22:30'},
+  {round:'Dieciseisavos', slot:16, match:88, date:'Vie 3 Jul', time:'15:00'},
+  // Octavos de final - 8 partidos (P89-96)
+  {round:'Octavos', slot:1, match:90, date:'Sáb 4 Jul', time:'13:00'},
+  {round:'Octavos', slot:2, match:89, date:'Sáb 4 Jul', time:'17:00'},
+  {round:'Octavos', slot:3, match:91, date:'Dom 5 Jul', time:'16:00'},
+  {round:'Octavos', slot:4, match:92, date:'Dom 5 Jul', time:'20:00'},
+  {round:'Octavos', slot:5, match:93, date:'Lun 6 Jul', time:'15:00'},
+  {round:'Octavos', slot:6, match:94, date:'Lun 6 Jul', time:'20:00'},
+  {round:'Octavos', slot:7, match:95, date:'Mar 7 Jul', time:'12:00'},
+  {round:'Octavos', slot:8, match:96, date:'Mar 7 Jul', time:'16:00'},
+  // Cuartos de final - 4 partidos (P97-100)
+  {round:'Cuartos', slot:1, match:97, date:'Jue 9 Jul', time:'16:00'},
+  {round:'Cuartos', slot:2, match:98, date:'Vie 10 Jul', time:'15:00'},
+  {round:'Cuartos', slot:3, match:99, date:'Sáb 11 Jul', time:'17:00'},
+  {round:'Cuartos', slot:4, match:100, date:'Sáb 11 Jul', time:'21:00'},
+  // Semifinales - 2 partidos (P101-102)
+  {round:'Semifinal', slot:1, match:101, date:'Mar 14 Jul', time:'15:00'},
+  {round:'Semifinal', slot:2, match:102, date:'Mié 15 Jul', time:'15:00'},
+  // Tercer puesto (P103)
+  {round:'Tercer puesto', slot:1, match:103, date:'Sáb 18 Jul', time:'17:00'},
+  // Final (P104)
+  {round:'Final', slot:1, match:104, date:'Dom 19 Jul', time:'15:00'},
 ];
 
 // Build a name -> flag code lookup from all known teams (for elimination rounds
@@ -822,9 +822,12 @@ FIXTURE_S1.forEach(day=>{
 
 // Lookup table for elimination round slots: 'Dieciseisavos-1' -> {date,time,utcMs}
 const ELIM_SLOTS = {};
+const ELIM_SLOTS_BY_MATCH = {};
 FIXTURE_ELIM.forEach(s=>{
   const key = s.round+'-'+s.slot;
-  ELIM_SLOTS[key] = { date:s.date, time:s.time, utcMs: argDateTimeToUTC(s.date, s.time) };
+  const entry = { date:s.date, time:s.time, utcMs: argDateTimeToUTC(s.date, s.time), match:s.match };
+  ELIM_SLOTS[key] = entry;
+  if(s.match) ELIM_SLOTS_BY_MATCH[s.match] = entry;
 });
 
 function isMatchLocked(id){
@@ -1378,6 +1381,31 @@ function getTeamStats(teamCode,g){
 
 let suggestedFixtures2=[];
 
+// ── OFFICIAL FIFA 2026 ROUND-OF-32 BRACKET ────────────────────────
+// Source: official match schedule (Partidos 73-88). Each match is either
+// a fixed pairing (two groups) or involves a "best 3rd from group X/Y/Z..."
+// which can only be filled by a 3rd-place team from one of those SPECIFIC
+// groups - never any arbitrary 3rd place team. This mirrors FIFA's real
+// regulation (not a simplified "best vs best" pairing).
+const R32_BRACKET = [
+  { match:73, label:'Dieciseisavos #1 (P73)', a:{type:'pos',group:'A',pos:2}, b:{type:'pos',group:'B',pos:2} },
+  { match:74, label:'Dieciseisavos #2 (P74)', a:{type:'pos',group:'E',pos:1}, b:{type:'third',groups:['A','B','C','D','F']} },
+  { match:75, label:'Dieciseisavos #3 (P75)', a:{type:'pos',group:'F',pos:1}, b:{type:'pos',group:'C',pos:2} },
+  { match:76, label:'Dieciseisavos #4 (P76)', a:{type:'pos',group:'C',pos:1}, b:{type:'pos',group:'F',pos:2} },
+  { match:77, label:'Dieciseisavos #5 (P77)', a:{type:'pos',group:'I',pos:1}, b:{type:'third',groups:['C','D','F','G','H']} },
+  { match:78, label:'Dieciseisavos #6 (P78)', a:{type:'pos',group:'E',pos:2}, b:{type:'pos',group:'I',pos:2} },
+  { match:79, label:'Dieciseisavos #7 (P79)', a:{type:'pos',group:'A',pos:1}, b:{type:'third',groups:['C','E','F','H','I']} },
+  { match:80, label:'Dieciseisavos #8 (P80)', a:{type:'pos',group:'L',pos:1}, b:{type:'third',groups:['E','H','I','J','K']} },
+  { match:81, label:'Dieciseisavos #9 (P81)', a:{type:'pos',group:'D',pos:1}, b:{type:'third',groups:['B','E','F','I','J']} },
+  { match:82, label:'Dieciseisavos #10 (P82)', a:{type:'pos',group:'G',pos:1}, b:{type:'third',groups:['A','E','H','I','J']} },
+  { match:83, label:'Dieciseisavos #11 (P83)', a:{type:'pos',group:'K',pos:2}, b:{type:'pos',group:'L',pos:2} },
+  { match:84, label:'Dieciseisavos #12 (P84)', a:{type:'pos',group:'H',pos:1}, b:{type:'pos',group:'J',pos:2} },
+  { match:85, label:'Dieciseisavos #13 (P85)', a:{type:'pos',group:'B',pos:1}, b:{type:'third',groups:['E','F','G','I','J']} },
+  { match:86, label:'Dieciseisavos #14 (P86)', a:{type:'pos',group:'J',pos:1}, b:{type:'pos',group:'H',pos:2} },
+  { match:87, label:'Dieciseisavos #15 (P87)', a:{type:'pos',group:'K',pos:1}, b:{type:'third',groups:['D','E','I','J','L']} },
+  { match:88, label:'Dieciseisavos #16 (P88)', a:{type:'pos',group:'D',pos:2}, b:{type:'pos',group:'G',pos:2} },
+];
+
 function calcClassified(){
   let html=''; let allThirds=[];
   const standings={};
@@ -1402,6 +1430,7 @@ function calcClassified(){
   });
   allThirds.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
   const best8=allThirds.slice(0,8);
+  const best8groups = best8.map(t=>t.group); // ordered list of qualifying 3rd-place groups
   html+=`<div class="card" style="padding:10px 14px;margin-bottom:8px">
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Mejores 8 terceros</div>`;
   best8.forEach((t,i)=>{
@@ -1415,42 +1444,65 @@ function calcClassified(){
     </div>`;
   });
   html+='</div>';
-  document.getElementById('classified-list').innerHTML=html;
-  const tops={};
-  Object.keys(standings).forEach(g=>{tops[g]={first:standings[g][0],second:standings[g][1]};});
-  suggestedFixtures2=[
-    {id:'s2_r32_1',label:'Dieciseisavos 1',a:tops['A']?.second,b:tops['B']?.second},
-    {id:'s2_r32_2',label:'Dieciseisavos 2',a:tops['E']?.first,b:best8[0]},
-    {id:'s2_r32_3',label:'Dieciseisavos 3',a:tops['C']?.first,b:tops['F']?.second},
-    {id:'s2_r32_4',label:'Dieciseisavos 4',a:tops['F']?.first,b:tops['C']?.second},
-    {id:'s2_r32_5',label:'Dieciseisavos 5',a:tops['E']?.second,b:tops['I']?.second},
-    {id:'s2_r32_6',label:'Dieciseisavos 6',a:tops['I']?.first,b:best8[1]},
-    {id:'s2_r32_7',label:'Dieciseisavos 7',a:tops['A']?.first,b:best8[2]},
-    {id:'s2_r32_8',label:'Dieciseisavos 8',a:tops['L']?.first,b:best8[3]},
-    {id:'s2_r32_9',label:'Dieciseisavos 9',a:tops['K']?.second,b:tops['L']?.second},
-    {id:'s2_r32_10',label:'Dieciseisavos 10',a:tops['D']?.first,b:best8[4]},
-    {id:'s2_r32_11',label:'Dieciseisavos 11',a:tops['H']?.first,b:tops['J']?.second},
-    {id:'s2_r32_12',label:'Dieciseisavos 12',a:tops['G']?.first,b:best8[5]},
-    {id:'s2_r32_13',label:'Dieciseisavos 13',a:tops['B']?.first,b:best8[6]},
-    {id:'s2_r32_14',label:'Dieciseisavos 14',a:tops['J']?.first,b:tops['H']?.second},
-    {id:'s2_r32_15',label:'Dieciseisavos 15',a:tops['D']?.second,b:tops['G']?.second},
-    {id:'s2_r32_16',label:'Dieciseisavos 16',a:tops['K']?.first,b:best8[7]},
-  ].filter(f=>f.a&&f.b);
-  let fhtml=suggestedFixtures2.map((f,i)=>`
+
+  // Resolve the official bracket: for each "third" slot, assign the qualified
+  // 3rd-place team whose group is in that slot's allowed-groups list AND has
+  // not already been assigned to a different match (each 3rd is used exactly once).
+  const usedThirdGroups = new Set();
+  function resolveThird(allowedGroups){
+    for(const g of best8groups){
+      if(allowedGroups.includes(g) && !usedThirdGroups.has(g)){
+        usedThirdGroups.add(g);
+        return best8.find(t=>t.group===g);
+      }
+    }
+    return null;
+  }
+
+  suggestedFixtures2 = [];
+  let unresolvedCount = 0;
+  R32_BRACKET.forEach(m=>{
+    function resolveSide(side){
+      if(side.type==='pos'){
+        const st = standings[side.group];
+        return st && st[side.pos-1] ? st[side.pos-1] : null;
+      }
+      // type === 'third'
+      return resolveThird(side.groups);
+    }
+    const teamA = resolveSide(m.a);
+    const teamB = resolveSide(m.b);
+    if(teamA && teamB){
+      const slotInfo = ELIM_SLOTS_BY_MATCH[m.match];
+      const fullLabel = slotInfo ? (m.label+' · '+slotInfo.date+' '+slotInfo.time+'hs') : m.label;
+      suggestedFixtures2.push({ id:'s2_p'+m.match, label:fullLabel, a:teamA, b:teamB, match:m.match });
+    } else {
+      unresolvedCount++;
+    }
+  });
+
+  let fhtml = suggestedFixtures2.map(f=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border-radius:var(--r);margin-bottom:5px;border:0.5px solid var(--border)">
       <span style="font-size:10px;color:var(--text2);min-width:90px">${f.label}</span>
       <span style="font-size:12px;font-weight:600;flex:1;text-align:right">${f.a.name}</span>
       <span style="font-size:11px;color:var(--text3)">vs</span>
       <span style="font-size:12px;font-weight:600;flex:1">${f.b.name}</span>
     </div>`).join('');
-  document.getElementById('suggested-fixtures').innerHTML=fhtml;
+  if(unresolvedCount>0){
+    fhtml += `<div style="font-size:11px;color:var(--text3);padding:8px 0;text-align:center">⚠️ ${unresolvedCount} cruce(s) todavía no se pueden resolver (faltan resultados de fase de grupos)</div>`;
+  }
+  document.getElementById('suggested-fixtures').innerHTML=fhtml || '<div class="empty">Esperando que termine la fase de grupos para calcular el bracket completo.</div>';
+  document.getElementById('classified-list').innerHTML=html;
   document.getElementById('suggested-section').style.display='block';
-  toast('t-classified','✅ Clasificados calculados');
+  toast('t-classified', suggestedFixtures2.length===16 ? '✅ Bracket completo de dieciseisavos resuelto' : `⚠️ ${suggestedFixtures2.length}/16 cruces resueltos por ahora`);
 }
 
 async function confirmSuggestedFixtures(){
   for(const f of suggestedFixtures2){
-    await api('add-fixture',{pass:orgPass,section:2,id:f.id,teamA:f.a.name,teamB:f.b.name,label:f.label});
+    const matchNum = parseInt(f.id.replace('s2_p',''));
+    const slotInfo = ELIM_SLOTS_BY_MATCH[matchNum];
+    const slotKey = slotInfo ? ('Dieciseisavos-'+FIXTURE_ELIM.find(s=>s.match===matchNum)?.slot) : '';
+    await api('add-fixture',{pass:orgPass,section:2,id:f.id,teamA:f.a.name,teamB:f.b.name,label:f.label,slotKey});
   }
   const cfg=data.config||{};
   if(!cfg.sections) cfg.sections={s1:true,s2:false,extra:false};
