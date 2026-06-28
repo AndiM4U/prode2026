@@ -756,7 +756,11 @@ function renderS1Inputs(){
 function renderElimInputRow(f){
   const id=f.id;
   let pa='',pb='';
-  try{const v=myPreds[id]?JSON.parse(myPreds[id]):{};pa=v.a||'';pb=v.b||'';}catch(e){}
+  try{
+    const raw=myPreds[id];
+    const v=raw?(typeof raw==='string'?JSON.parse(raw):raw):{};
+    pa=v.a||'';pb=v.b||'';
+  }catch(e){}
   const locked=isMatchLocked(id);
   const rowStyle=locked?'opacity:0.45;pointer-events:none':'';
   const lockMark=locked?' 🔒':'';
@@ -1592,4 +1596,4 @@ function loadOrgConfig(){
 document.getElementById('l-name').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 </script>
 </body>
-  </html>
+</html>
