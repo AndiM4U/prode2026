@@ -561,6 +561,7 @@ function getMatchTeamNames(id){
 // regardless of how the organizer typed teamA/teamB when saving the result.
 function calcMatchPts(id, pa, pb, res){
   let resSa = res.sa, resSb = res.sb;
+  let teamAWasSwapped = false;
   const matchTeams = getMatchTeamNames(id);
   if(matchTeams){
     const normalize = s => (s||'').toLowerCase().trim();
@@ -568,13 +569,33 @@ function calcMatchPts(id, pa, pb, res){
     const resAisFixtureB = normalize(res.teamA) === normalize(matchTeams.bName);
     if(resAisFixtureB && !resAisFixtureA){
       resSa = res.sb; resSb = res.sa;
+      teamAWasSwapped = true;
     }
   }
   let pts = 0;
-  const rw = resSa>resSb?'A':resSa<resSb?'B':'X';
   const pw = pa>pb?'A':pa<pb?'B':'X';
-  if(rw===pw) pts+=1;
-  if(pa===resSa&&pb===resSb) pts+=2;
+  const exactMatch90 = (pa===resSa && pb===resSb);
+
+  if(exactMatch90){
+    // Exact 90-minute score always earns the full 3 points (1 for outcome + 2 for exact),
+    // regardless of penalties/who advances — matching what happened on the pitch in 90'.
+    pts = 3;
+  } else if(resSa===resSb){
+    // Draw after 90 minutes (elimination match) but NOT predicted exactly.
+    // The only remaining way to score is correctly picking who advances after
+    // extra time/penalties (1pt). Predicting a plain (inexact) draw earns nothing.
+    if(res.winner){
+      const normalize = s => (s||'').toLowerCase().trim();
+      const winnerIsFixtureA = matchTeams && normalize(res.winner) === normalize(matchTeams.aName);
+      const winnerIsFixtureB = matchTeams && normalize(res.winner) === normalize(matchTeams.bName);
+      const penaltyWinnerSide = winnerIsFixtureA ? 'A' : (winnerIsFixtureB ? 'B' : null);
+      if(penaltyWinnerSide && pw===penaltyWinnerSide) pts+=1;
+    }
+  } else {
+    // Normal (non-draw) match, not exact: standard "correct winner" logic.
+    const rw = resSa>resSb?'A':'B';
+    if(rw===pw) pts+=1;
+  }
   return { pts, resSa, resSb };
 }
 
@@ -1048,6 +1069,9 @@ function renderPlayerResults(){
         html+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+flagImg(r.res.teamA)+r.res.teamA+'</span>';
         html+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+r.res.sa+'–'+r.res.sb+'</span>';
         html+='<span style="font-size:12px;font-weight:600;flex:1">'+flagImg(r.res.teamB)+r.res.teamB+'</span>';
+        if(r.res.winner){
+          html+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">⚽ '+r.res.winner+' avanza por penales</span>';
+        }
         if(r.pa!==''){
           html+='<span style="font-size:10px;color:var(--text3)">'+r.pa+'–'+r.pb+'</span>';
           html+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+r.pts+'pts</span>';
@@ -1157,7 +1181,7 @@ function renderFixtureS1(){
 }
 
 function stageRes(id,teamA,teamB,side,val){
-  if(!stagedResults[id]) stagedResults[id]={teamA,teamB,sa:'',sb:''};
+  if(!stagedResults[id]) stagedResults[id]={teamA,teamB,sa:'',sb:'',winner:''};
   stagedResults[id][side]=val;
 }
 
@@ -1209,8 +1233,21 @@ function renderElimMatchRow(f){
   const res=rv?(typeof rv==='string'?JSON.parse(rv):rv):null;
   const sa=res?res.sa:''; const sb=res?res.sb:'';
   const done=sa!==''&&sa!==undefined;
+  const isDraw = done && parseInt(sa)===parseInt(sb);
+  const savedWinner = res?res.winner:'';
+  // If it's a draw (goes to penalties), show a winner selector. Mandatory to save in that case.
+  const winnerSelector = isDraw ? `
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 0 8px;font-size:10px;color:var(--text2)">
+      <span>⚽ Empate → ¿Quién avanza por penales?</span>
+      <select onchange="stageRes('${f.id}','${f.teamA}','${f.teamB}','winner',this.value)"
+        style="font-size:11px;padding:3px 6px;border-radius:5px;border:0.5px solid var(--border2);background:${savedWinner?'var(--green2)':'var(--bg2)'};color:var(--text)">
+        <option value="" ${!savedWinner?'selected':''}>Elegir...</option>
+        <option value="${f.teamA}" ${savedWinner===f.teamA?'selected':''}>${f.teamA}</option>
+        <option value="${f.teamB}" ${savedWinner===f.teamB?'selected':''}>${f.teamB}</option>
+      </select>
+    </div>` : '';
   return `<div style="font-size:11px;color:var(--text2);padding-top:6px;font-weight:500">${f.label||''}</div>
-    <div style="display:grid;grid-template-columns:1fr 36px auto 36px 1fr auto;align-items:center;gap:4px;padding:6px 0;border-bottom:0.5px solid var(--border)">
+    <div style="display:grid;grid-template-columns:1fr 36px auto 36px 1fr auto;align-items:center;gap:4px;padding:6px 0">
       <div style="text-align:right;font-size:12px;font-weight:500">${flagImg(f.teamA)}${f.teamA}</div>
       <input type="number" min="0" max="20" placeholder="–" value="${done?sa:''}"
         style="width:36px;height:34px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'var(--bg2)'};color:var(--text);font-size:15px;font-weight:600"
@@ -1222,7 +1259,8 @@ function renderElimMatchRow(f){
       <div style="font-size:12px;font-weight:500">${flagImg(f.teamB)}${f.teamB}</div>
       <button style="font-size:10px;padding:3px 7px;border-radius:5px;border:0.5px solid ${done?'var(--teal)':'var(--border2)'};background:${done?'var(--teal2)':'transparent'};color:${done?'var(--teal)':'var(--text2)'};cursor:pointer"
         onclick="saveResElim('${f.id}','${f.teamA}','${f.teamB}')">${done?'✓':'OK'}</button>
-    </div>`;
+    </div>
+    <div style="border-bottom:0.5px solid var(--border)">${winnerSelector}</div>`;
 }
 
 function renderElimResults(){
@@ -1285,7 +1323,13 @@ async function saveResElim(id,teamA,teamB){
   const sa=staged.sa!==''?staged.sa:(existing?existing.sa:'');
   const sb=staged.sb!==''?staged.sb:(existing?existing.sb:'');
   if(sa===''||sb===''||sa===undefined||sb===undefined){toast('t-r2','⚠️ Ingresá los goles');return;}
-  await api('add-result',{pass:orgPass,id,teamA,teamB,sa,sb});
+  const winner=staged.winner!==undefined&&staged.winner!==''?staged.winner:(existing?existing.winner:'');
+  // If the match is a draw, a winner (who advances on penalties) is mandatory
+  if(parseInt(sa)===parseInt(sb) && !winner){
+    toast('t-r2','⚠️ Es empate: elegí quién avanza por penales');
+    return;
+  }
+  await api('add-result',{pass:orgPass,id,teamA,teamB,sa,sb,winner:winner||''});
   await loadAll();
   toast('t-r2',`✅ ${teamA} ${sa}–${sb} ${teamB}`);
 }
@@ -1445,19 +1489,19 @@ function calcClassified(){
   });
   html+='</div>';
 
-  // Resolve the official bracket: for each "third" slot, assign the qualified
-  // 3rd-place team whose group is in that slot's allowed-groups list AND has
-  // not already been assigned to a different match (each 3rd is used exactly once).
-  const usedThirdGroups = new Set();
-  function resolveThird(allowedGroups){
-    for(const g of best8groups){
-      if(allowedGroups.includes(g) && !usedThirdGroups.has(g)){
-        usedThirdGroups.add(g);
-        return best8.find(t=>t.group===g);
-      }
-    }
-    return null;
-  }
+  // OFFICIAL FIXED ASSIGNMENT — the 2026 group stage is fully complete and FIFA
+  // already published the final Round-of-32 bracket (Anexo C combination locked in
+  // on June 27, 2026). Rather than re-deriving which 3rd-place team plays which
+  // group winner — which depends on FIFA's full 495-row matrix, not just the
+  // simple "allowed groups" list — we use the confirmed official pairing directly.
+  // Source: multiple outlets (ClaroSports, Mediotiempo) citing the published Anexo C result:
+  //   1A(México)-3E · 1B(Suiza)-3J · 1D(EE.UU.)-3B · 1E(Alemania)-3D
+  //   1G(Bélgica)-3I · 1I(Francia)-3F · 1K(Colombia)-3L · 1L(Inglaterra)-3K
+  const OFFICIAL_THIRD_ASSIGNMENT = { 74:'D', 77:'F', 79:'E', 80:'K', 81:'B', 82:'I', 85:'J', 87:'L' };
+  const matchToThirdTeam = {};
+  Object.entries(OFFICIAL_THIRD_ASSIGNMENT).forEach(([matchNum,g])=>{
+    matchToThirdTeam[matchNum] = best8.find(t=>t.group===g);
+  });
 
   suggestedFixtures2 = [];
   let unresolvedCount = 0;
@@ -1467,8 +1511,8 @@ function calcClassified(){
         const st = standings[side.group];
         return st && st[side.pos-1] ? st[side.pos-1] : null;
       }
-      // type === 'third'
-      return resolveThird(side.groups);
+      // type === 'third': look up the pre-solved assignment for this match
+      return matchToThirdTeam[m.match] || null;
     }
     const teamA = resolveSide(m.a);
     const teamB = resolveSide(m.b);
