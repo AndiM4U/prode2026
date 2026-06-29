@@ -217,10 +217,10 @@ input:checked + .sw-track::after{transform:translateX(20px)}
 
   <div id="o-rank" class="sec active">
     <div class="stabs">
-      <button class="stab s1a active" onclick="showRankView('general',this)">General</button>
-      <button class="stab" onclick="showRankView('s1',this)">Fase grupos</button>
-      <button class="stab" onclick="showRankView('s2',this)">Eliminatorias</button>
-      <button class="stab" onclick="showRankView('champ',this)">Campeón/Goleador</button>
+      <button class="stab s1a active" id="org-rank-tab-general" onclick="showRankView('general',this)">General</button>
+      <button class="stab" id="org-rank-tab-s1" onclick="showRankView('s1',this)">Fase grupos</button>
+      <button class="stab" id="org-rank-tab-s2" onclick="showRankView('s2',this)">Eliminatorias</button>
+      <button class="stab" id="org-rank-tab-champ" onclick="showRankView('champ',this)">Campeón/Goleador</button>
     </div>
     <div class="sgrid" id="o-stats"></div>
     <div class="card" id="o-rank-list"><div class="loading">Cargando...</div></div>
@@ -444,13 +444,52 @@ function showResTab(id,btn){
   btn.classList.add('active', id==='rs1'?'s1a':'s2a');
 }
 
-let rankView='general';
-function showRankView(view,btn){
-  rankView=view;
-  document.querySelectorAll('.stabs .stab').forEach(t=>t.classList.remove('active','s1a','s2a'));
-  btn.classList.add('active', view==='s2'?'s2a':'s1a');
+// Unified filter shared across Ranking, Resultados, and the position banner.
+// 'general' = combined S1+S2, 's1' = group stage only, 's2' = eliminations only.
+let globalFilterView='general';
+
+function setGlobalFilterView(view){
+  globalFilterView=view;
+  // Sync visual state across ALL tab groups that share this filter (Ranking's
+  // two .stabs — player and organizer — plus Resultados' .stabs) so picking the
+  // filter in any one of them reflects everywhere else too.
+  const rankEquivalent = view; // 'general' | 's1' | 's2' | 'champ'
+  document.querySelectorAll('#p-rank .stabs .stab, #o-rank .stabs .stab').forEach(t=>{
+    t.classList.remove('active','s1a','s2a');
+    if(t.id && t.id.endsWith('-'+rankEquivalent)) t.classList.add('active', view==='s2'?'s2a':'s1a');
+  });
+  // Resultados has no "champ" view — only general/s1/s2 (labeled 'all' for general).
+  document.querySelectorAll('#p-resultados .stabs .stab').forEach(t=>{
+    t.classList.remove('active','s1a','s2a');
+    const presultsEquivalent = view==='general' ? 'all' : view;
+    if(t.id && t.id.endsWith('-'+presultsEquivalent)) t.classList.add('active', view==='s2'?'s2a':'s1a');
+  });
   renderRanking('p-rank-list','p-stats');
   renderRanking('o-rank-list','o-stats');
+  renderPlayerResults();
+  renderPositionBanner();
+}
+
+function showRankView(view,btn){
+  if(view==='champ'){
+    // "Campeón/Goleador" is a distinct view with no group-stage/elimination
+    // equivalent, so it doesn't participate in the shared filter sync — it only
+    // affects the Ranking tab it was clicked from, leaving Resultados/banner alone.
+    globalFilterView='champ';
+    document.querySelectorAll('#p-rank .stabs .stab, #o-rank .stabs .stab').forEach(t=>{
+      t.classList.remove('active','s1a','s2a');
+    });
+    btn.classList.add('active','s2a');
+    renderRanking('p-rank-list','p-stats');
+    renderRanking('o-rank-list','o-stats');
+    return;
+  }
+  setGlobalFilterView(view);
+}
+
+function showPResultsView(view,btn){
+  // Resultados uses 'all' for the combined view; map it to 'general' internally.
+  setGlobalFilterView(view==='all' ? 'general' : view);
 }
 
 let user=null,isOrg=false,orgPass='';
@@ -661,7 +700,7 @@ function renderRanking(listId,statsId){
   const names=Object.keys(data.players||{});
   let ranked;
 
-  if(rankView==='champ'){
+  if(globalFilterView==='champ'){
     ranked=names.map((n,i)=>{
       const s=champGolStatus(n);
       const pd=data.players[n];
@@ -669,9 +708,9 @@ function renderRanking(listId,statsId){
       return{name:n,idx:i,champ:s.champ,gol:s.gol,champPred:p.champ||'–',golPred:p.goleador||'–'};
     });
   } else {
-    const sf=rankView==='general'?null:rankView==='s1'?1:2;
+    const sf=globalFilterView==='general'?null:globalFilterView==='s1'?1:2;
     ranked=names.map((n,i)=>({name:n,idx:i,pts:calcPts(n,sf),pts_s1:calcPts(n,1),pts_s2:calcPts(n,2)})).sort((a,b)=>{
-      if(sf===2||rankView==='general') return b.pts-a.pts||(b.pts_s1-a.pts_s1);
+      if(sf===2||globalFilterView==='general') return b.pts-a.pts||(b.pts_s1-a.pts_s1);
       return b.pts-a.pts;
     });
   }
@@ -689,9 +728,9 @@ function renderRanking(listId,statsId){
   if(!names.length){el.innerHTML='<div class="empty">Sin jugadores aún</div>';return;}
 
   const labels={null:'General',1:'Fase grupos',2:'Eliminatorias (desempate por S1)',champ:'Campeón y Goleador'};
-  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Ranking: ${labels[rankView==='general'?null:rankView==='s1'?1:rankView==='s2'?2:'champ']||''}</div>`;
+  let html=`<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Ranking: ${labels[globalFilterView==='general'?null:globalFilterView==='s1'?1:globalFilterView==='s2'?2:'champ']||''}</div>`;
 
-  if(rankView==='champ'){
+  if(globalFilterView==='champ'){
     html+=ranked.map((p,rank)=>{
       const [bg,fg]=gc(p.idx);
       return `<div class="rrow">
@@ -711,13 +750,13 @@ function renderRanking(listId,statsId){
       const medal=rank===0?'🥇':rank===1?'🥈':rank===2?'🥉':'';
       const [bg,fg]=gc(p.idx);
       const [pbg,pfg]=rank===0?['#FAEEDA','#633806']:rank===1?['#F1EFE8','#444441']:rank===2?['#FAECE7','#712B13']:['var(--bg2)','var(--text2)'];
-      const tieBreak = rankView==='s2'&&rank>0&&ranked[rank-1].pts===p.pts ? '<span style="font-size:9px;color:var(--text3)"> (tb:S1)</span>' : '';
+      const tieBreak = globalFilterView==='s2'&&rank>0&&ranked[rank-1].pts===p.pts ? '<span style="font-size:9px;color:var(--text3)"> (tb:S1)</span>' : '';
       return `<div class="rrow">
         <div style="font-size:15px;min-width:26px;text-align:center">${medal||rank+1}</div>
         <div class="av" style="background:${bg};color:${fg}">${ini(p.name)}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}${tieBreak}</div>
-          ${rankView==='general'?`<div style="font-size:10px;color:var(--text3)">S1: ${p.pts_s1} · S2: ${p.pts_s2}</div>`:''}
+          ${globalFilterView==='general'?`<div style="font-size:10px;color:var(--text3)">S1: ${p.pts_s1} · S2: ${p.pts_s2}</div>`:''}
         </div>
         <div class="pill" style="background:${pbg};color:${pfg}">${p.pts} pts</div>
       </div>`;
@@ -1018,7 +1057,11 @@ function renderPositionBanner(){
   if(!el || !user) return;
   const names = Object.keys(data.players||{});
   if(!names.length){ el.style.display='none'; return; }
-  const ranked = names.map(n=>({name:n, pts:calcPts(n,null), pts_s1:calcPts(n,1)}))
+  // Respect the same global filter as Ranking/Resultados: 'general' = combined,
+  // 's1' = group stage only, 's2' = eliminations only. 'champ' isn't a valid
+  // points filter, so fall back to general in that case.
+  const bannerFilter = (globalFilterView==='s1' || globalFilterView==='s2') ? (globalFilterView==='s1'?1:2) : null;
+  const ranked = names.map(n=>({name:n, pts:calcPts(n,bannerFilter), pts_s1:calcPts(n,1)}))
     .sort((a,b)=>b.pts-a.pts||(b.pts_s1-a.pts_s1));
   const pos = ranked.findIndex(p=>p.name===user);
   if(pos===-1){ el.style.display='none'; return; }
@@ -1029,11 +1072,12 @@ function renderPositionBanner(){
   const fg = pos===0?'var(--amber3)':pos===1?'var(--text2)':pos===2?'var(--coral)':'var(--blue3)';
   const leader = ranked[0];
   const diff = pos===0 ? '' : ' · '+(myPts - leader.pts)+' pts del líder';
+  const filterLabel = bannerFilter===1 ? ' (Fase grupos)' : bannerFilter===2 ? ' (Eliminatorias)' : '';
   el.style.display='block';
   el.innerHTML='<div style="background:'+bg+';border-radius:var(--rl);padding:10px 16px;display:flex;align-items:center;gap:10px;border:0.5px solid '+fg+'">'
     +'<div style="font-size:24px">'+medal+'</div>'
     +'<div style="flex:1">'
-    +'<div style="font-size:13px;font-weight:700;color:'+fg+'">Posición '+( pos+1)+' de '+total+diff+'</div>'
+    +'<div style="font-size:13px;font-weight:700;color:'+fg+'">Posición '+( pos+1)+' de '+total+diff+filterLabel+'</div>'
     +'<div style="font-size:11px;color:'+fg+';opacity:0.8">'+myPts+' pts totales · S1: '+calcPts(user,1)+' · S2: '+calcPts(user,2)+'</div>'
     +'</div>'
     +'</div>';
@@ -1041,14 +1085,6 @@ function renderPositionBanner(){
 // ── END POSITION BANNER ───────────────────────────────────────────
 
 // ── PLAYER RESULTS VIEW ──────────────────────────────────────────
-let presultsView='all';
-function showPResultsView(view,btn){
-  presultsView=view;
-  document.querySelectorAll('#p-resultados .stab').forEach(t=>t.classList.remove('active','s1a','s2a'));
-  btn.classList.add('active', view==='s2'?'s2a':'s1a');
-  renderPlayerResults();
-}
-
 function renderPlayerResults(){
   const el = document.getElementById('p-results-list');
   if(!el) return;
@@ -1169,6 +1205,11 @@ function renderPlayerResults(){
             htmlS2+=' · tu pronóstico: '+r.predWinner+(matchedWinner?' ✓':' ✗');
           }
           htmlS2+='</span>';
+        } else if(r.predWinner){
+          // The real match did NOT end in a draw, but the player's OWN prediction
+          // was tied — show who they had picked to advance, as context, even
+          // though that pick wasn't relevant for scoring since 90' had a clear winner.
+          htmlS2+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">Tu pronóstico era empate · elegiste que avanza: '+r.predWinner+'</span>';
         }
         if(r.pa!==''){
           htmlS2+='<span style="font-size:10px;color:var(--text3)">'+r.pa+'–'+r.pb+'</span>';
@@ -1182,14 +1223,17 @@ function renderPlayerResults(){
     });
   }
 
-  // Assemble final HTML based on the active filter — "all" shows both stages
-  // (groups first, then eliminations), "s1" shows only group stage, "s2" only eliminations.
+  // Assemble final HTML based on the active filter — "all"/"general" and "champ"
+  // (which has no group/elimination meaning here) both show both stages; "s1"
+  // shows only group stage, "s2" only eliminations.
   let html='';
-  if(presultsView==='all' || presultsView==='s1') html += htmlS1;
-  if(presultsView==='all' || presultsView==='s2') html += htmlS2;
+  const showS1 = globalFilterView==='general' || globalFilterView==='s1' || globalFilterView==='champ';
+  const showS2 = globalFilterView==='general' || globalFilterView==='s2' || globalFilterView==='champ';
+  if(showS1) html += htmlS1;
+  if(showS2) html += htmlS2;
   if(!html){
-    const emptyMsg = presultsView==='s1' ? 'Todavía no hay resultados de fase de grupos.'
-      : presultsView==='s2' ? 'Todavía no hay resultados de eliminatorias.'
+    const emptyMsg = globalFilterView==='s1' ? 'Todavía no hay resultados de fase de grupos.'
+      : globalFilterView==='s2' ? 'Todavía no hay resultados de eliminatorias.'
       : 'Todavía no hay resultados cargados.';
     html = '<div class="empty">'+emptyMsg+'</div>';
   }
@@ -1699,7 +1743,7 @@ function renderOrgPlayers(){
     const isExpanded = expandedPlayer===n;
     let predsHtml='';
     if(isExpanded){
-      predsHtml=renderPlayerPredsDetail(n);
+      predsHtml=renderOrgChampGolEditor(n, p) + renderPlayerPredsDetail(n);
     }
     return `<div style="border-bottom:0.5px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer" onclick="toggleExpandPlayer('${n}')">
@@ -1719,6 +1763,34 @@ function renderOrgPlayers(){
 function toggleExpandPlayer(name){
   expandedPlayer = expandedPlayer===name ? null : name;
   renderOrgPlayers();
+}
+
+function renderOrgChampGolEditor(name, p){
+  return `<div style="padding:8px 12px;background:var(--bg2);border-radius:var(--r);margin-bottom:6px">
+    <div style="font-size:10px;color:var(--text2);font-weight:600;margin-bottom:6px">🏆 Campeón / Goleador (editable por organizador)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <div>
+        <label style="font-size:9px;color:var(--text3)">Campeón</label>
+        <input id="org-champ-${name.replace(/[^a-zA-Z0-9]/g,'_')}" type="text" value="${p.champ||''}" placeholder="Ej: Argentina"
+          style="width:100%;height:32px;padding:0 8px;font-size:12px;border-radius:5px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text)">
+      </div>
+      <div>
+        <label style="font-size:9px;color:var(--text3)">Goleador</label>
+        <input id="org-gol-${name.replace(/[^a-zA-Z0-9]/g,'_')}" type="text" value="${p.goleador||''}" placeholder="Ej: Messi"
+          style="width:100%;height:32px;padding:0 8px;font-size:12px;border-radius:5px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text)">
+      </div>
+    </div>
+    <button class="btn-sm" onclick="orgSaveChampGol('${name}')">Guardar cambios</button>
+  </div>`;
+}
+
+async function orgSaveChampGol(name){
+  const safeName = name.replace(/[^a-zA-Z0-9]/g,'_');
+  const champ = document.getElementById('org-champ-'+safeName).value.trim();
+  const goleador = document.getElementById('org-gol-'+safeName).value.trim();
+  await api('save-player',{name,champ,goleador,pass:orgPass});
+  await loadAll();
+  toast('t-players','✅ Campeón/Goleador de '+name+' actualizado');
 }
 
 function renderPlayerPredsDetail(name){
