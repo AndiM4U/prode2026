@@ -143,6 +143,11 @@ input:checked + .sw-track::after{transform:translateX(20px)}
 
   <div id="p-resultados" class="sec">
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Resultados oficiales cargados por el organizador.</div>
+    <div class="stabs">
+      <button class="stab s1a active" id="presults-tab-all" onclick="showPResultsView('all',this)">Todos</button>
+      <button class="stab" id="presults-tab-s1" onclick="showPResultsView('s1',this)">Fase grupos</button>
+      <button class="stab" id="presults-tab-s2" onclick="showPResultsView('s2',this)">Eliminatorias</button>
+    </div>
     <div id="p-results-list"><div class="loading">Cargando...</div></div>
     <button class="btn-ghost" style="width:100%;margin-top:8px;display:block;text-align:center" onclick="renderPlayerResults()">↻ Actualizar</button>
   </div>
@@ -808,8 +813,6 @@ function renderElimInputRow(f){
   const locked=isMatchLocked(id);
   const rowStyle=locked?'opacity:0.45;pointer-events:none':'';
   const lockMark=locked?' 🔒':'';
-  let timeStr='';
-  if(f.slotKey && ELIM_SLOTS[f.slotKey]) timeStr=ELIM_SLOTS[f.slotKey].date+' '+ELIM_SLOTS[f.slotKey].time+'hs';
   // If the player's own prediction is a tie, ask who they think advances —
   // this lets them still earn the 1pt "correct winner" point even if the
   // exact 90-minute score isn't right, as long as 90'+ET+penalties pick is right.
@@ -825,8 +828,7 @@ function renderElimInputRow(f){
       </select>
     </div>` : '';
   let html='<div style="padding:4px 0;border-bottom:0.5px solid var(--border)">';
-  html+='<div style="font-size:10px;color:var(--text2);text-align:center;font-weight:500">'+(f.label||'')+'</div>';
-  if(timeStr) html+='<div style="font-size:9px;color:var(--text3);text-align:center;margin-bottom:2px">'+timeStr+lockMark+'</div>';
+  html+='<div style="font-size:10px;color:var(--text2);text-align:center;font-weight:500">'+(f.label||'')+lockMark+'</div>';
   html+='<div class="mrow" style="'+rowStyle+'">'
     +'<div class="tr">'+flagImg(f.teamA)+f.teamA+'</div>'
     +'<input class="sbox" type="number" min="0" max="20" value="'+pa+'" placeholder="–" data-id="'+id+'" data-s="a" oninput="setPred(this)" '+(locked?'disabled':'')+'>'
@@ -1039,6 +1041,14 @@ function renderPositionBanner(){
 // ── END POSITION BANNER ───────────────────────────────────────────
 
 // ── PLAYER RESULTS VIEW ──────────────────────────────────────────
+let presultsView='all';
+function showPResultsView(view,btn){
+  presultsView=view;
+  document.querySelectorAll('#p-resultados .stab').forEach(t=>t.classList.remove('active','s1a','s2a'));
+  btn.classList.add('active', view==='s2'?'s2a':'s1a');
+  renderPlayerResults();
+}
+
 function renderPlayerResults(){
   const el = document.getElementById('p-results-list');
   if(!el) return;
@@ -1074,10 +1084,10 @@ function renderPlayerResults(){
     });
   });
 
-  let html='';
+  let htmlS1='';
   Object.entries(byDay).forEach(([day,matches])=>{
-    html+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">'+day+'</div>';
-    html+='<div class="card" style="padding:8px 12px">';
+    htmlS1+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">'+day+'</div>';
+    htmlS1+='<div class="card" style="padding:8px 12px">';
     matches.forEach(function(item){
       const m=item.m, res=item.res, pa=item.pa, pb=item.pb, pts=item.pts, hasPred=item.hasPred;
       const ptsColor = pts===3?'var(--green)':pts===1?'var(--amber)':'var(--red)';
@@ -1086,25 +1096,26 @@ function renderPlayerResults(){
         const mx=day.matches.find(function(x){return x.id===m.id;});
         return mx?{date:day.date,time:mx.time}:found;
       }, null);
-      html+='<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">';
-      if(mInfo) html+='<div style="font-size:10px;color:var(--text3);margin-bottom:3px">'+mInfo.date+' · '+mInfo.time+'hs</div>';
-      html+='<div style="display:flex;align-items:center;gap:6px">';
-      html+='<img src="https://flagcdn.com/16x12/'+m.a[0].toLowerCase()+'.png" style="width:16px">';
-      html+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+m.a[1]+'</span>';
-      html+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+res.sa+'–'+res.sb+'</span>';
-      html+='<span style="font-size:12px;font-weight:600;flex:1">'+m.b[1]+'</span>';
-      html+='<img src="https://flagcdn.com/16x12/'+m.b[0].toLowerCase()+'.png" style="width:16px">';
+      htmlS1+='<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">';
+      if(mInfo) htmlS1+='<div style="font-size:10px;color:var(--text3);margin-bottom:3px">'+mInfo.date+' · '+mInfo.time+'hs</div>';
+      htmlS1+='<div style="display:flex;align-items:center;gap:6px">';
+      htmlS1+='<img src="https://flagcdn.com/16x12/'+m.a[0].toLowerCase()+'.png" style="width:16px">';
+      htmlS1+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+m.a[1]+'</span>';
+      htmlS1+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+res.sa+'–'+res.sb+'</span>';
+      htmlS1+='<span style="font-size:12px;font-weight:600;flex:1">'+m.b[1]+'</span>';
+      htmlS1+='<img src="https://flagcdn.com/16x12/'+m.b[0].toLowerCase()+'.png" style="width:16px">';
       if(hasPred){
-        html+='<span style="font-size:10px;color:var(--text3)">'+pa+'–'+pb+'</span>';
-        html+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+pts+'pts</span>';
+        htmlS1+='<span style="font-size:10px;color:var(--text3)">'+pa+'–'+pb+'</span>';
+        htmlS1+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+pts+'pts</span>';
       } else {
-        html+='<span style="font-size:10px;color:var(--text3)">sin pred.</span>';
+        htmlS1+='<span style="font-size:10px;color:var(--text3)">sin pred.</span>';
       }
-      html+='</div></div>';
+      htmlS1+='</div></div>';
     });
-    html+='</div>';
+    htmlS1+='</div>';
   });
 
+  let htmlS2='';
   if(s2Results.length){
     // Build rows with date info for grouping
     const elimRows = s2Results.map(function(entry){
@@ -1140,35 +1151,47 @@ function renderPlayerResults(){
       return ta - tb;
     });
     order.forEach(function(date){
-      html+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">'+date+'</div>';
-      html+='<div class="card" style="padding:8px 12px">';
+      htmlS2+='<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">'+date+'</div>';
+      htmlS2+='<div class="card" style="padding:8px 12px">';
       byDate[date].forEach(function(r){
         const ptsColor=r.pts===3?'var(--green)':r.pts===1?'var(--amber)':'var(--red)';
         const ptsBg=r.pts===3?'var(--green2)':r.pts===1?'var(--amber2)':'var(--red2)';
-        html+='<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">';
-        html+='<div style="font-size:10px;color:var(--text2);margin-bottom:3px">'+r.label+(r.time?' · '+r.time+'hs':'')+'</div>';
-        html+='<div style="display:flex;align-items:center;gap:6px">';
-        html+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+flagImg(r.res.teamA)+r.res.teamA+'</span>';
-        html+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+r.res.sa+'–'+r.res.sb+'</span>';
-        html+='<span style="font-size:12px;font-weight:600;flex:1">'+flagImg(r.res.teamB)+r.res.teamB+'</span>';
+        htmlS2+='<div style="padding:7px 0;border-bottom:0.5px solid var(--border)">';
+        htmlS2+='<div style="font-size:10px;color:var(--text2);margin-bottom:3px">'+r.label+(r.time?' · '+r.time+'hs':'')+'</div>';
+        htmlS2+='<div style="display:flex;align-items:center;gap:6px">';
+        htmlS2+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+flagImg(r.res.teamA)+r.res.teamA+'</span>';
+        htmlS2+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+r.res.sa+'–'+r.res.sb+'</span>';
+        htmlS2+='<span style="font-size:12px;font-weight:600;flex:1">'+flagImg(r.res.teamB)+r.res.teamB+'</span>';
         if(r.res.winner){
-          html+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">⚽ '+r.res.winner+' avanza';
+          htmlS2+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">⚽ '+r.res.winner+' avanza';
           if(r.predWinner){
             const matchedWinner = (r.predWinner.toLowerCase().trim() === r.res.winner.toLowerCase().trim());
-            html+=' · tu pronóstico: '+r.predWinner+(matchedWinner?' ✓':' ✗');
+            htmlS2+=' · tu pronóstico: '+r.predWinner+(matchedWinner?' ✓':' ✗');
           }
-          html+='</span>';
+          htmlS2+='</span>';
         }
         if(r.pa!==''){
-          html+='<span style="font-size:10px;color:var(--text3)">'+r.pa+'–'+r.pb+'</span>';
-          html+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+r.pts+'pts</span>';
+          htmlS2+='<span style="font-size:10px;color:var(--text3)">'+r.pa+'–'+r.pb+'</span>';
+          htmlS2+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+r.pts+'pts</span>';
         } else {
-          html+='<span style="font-size:10px;color:var(--text3)">sin pred.</span>';
+          htmlS2+='<span style="font-size:10px;color:var(--text3)">sin pred.</span>';
         }
-        html+='</div></div>';
+        htmlS2+='</div></div>';
       });
-      html+='</div>';
+      htmlS2+='</div>';
     });
+  }
+
+  // Assemble final HTML based on the active filter — "all" shows both stages
+  // (groups first, then eliminations), "s1" shows only group stage, "s2" only eliminations.
+  let html='';
+  if(presultsView==='all' || presultsView==='s1') html += htmlS1;
+  if(presultsView==='all' || presultsView==='s2') html += htmlS2;
+  if(!html){
+    const emptyMsg = presultsView==='s1' ? 'Todavía no hay resultados de fase de grupos.'
+      : presultsView==='s2' ? 'Todavía no hay resultados de eliminatorias.'
+      : 'Todavía no hay resultados cargados.';
+    html = '<div class="empty">'+emptyMsg+'</div>';
   }
 
   el.innerHTML=html;
