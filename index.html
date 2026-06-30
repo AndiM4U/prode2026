@@ -1198,26 +1198,30 @@ function renderPlayerResults(){
         htmlS2+='<span style="font-size:12px;font-weight:600;flex:1;text-align:right">'+flagImg(r.res.teamA)+r.res.teamA+'</span>';
         htmlS2+='<span style="font-size:15px;font-weight:700;color:var(--blue);min-width:40px;text-align:center">'+r.res.sa+'–'+r.res.sb+'</span>';
         htmlS2+='<span style="font-size:12px;font-weight:600;flex:1">'+flagImg(r.res.teamB)+r.res.teamB+'</span>';
-        if(r.res.winner){
-          htmlS2+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">⚽ '+r.res.winner+' avanza';
-          if(r.predWinner){
-            const matchedWinner = (r.predWinner.toLowerCase().trim() === r.res.winner.toLowerCase().trim());
-            htmlS2+=' · tu pronóstico: '+r.predWinner+(matchedWinner?' ✓':' ✗');
-          }
-          htmlS2+='</span>';
-        } else if(r.predWinner){
-          // The real match did NOT end in a draw, but the player's OWN prediction
-          // was tied — show who they had picked to advance, as context, even
-          // though that pick wasn't relevant for scoring since 90' had a clear winner.
-          htmlS2+='<span style="font-size:9px;color:var(--text3);display:block;text-align:center;margin-top:2px">Tu pronóstico era empate · elegiste que avanza: '+r.predWinner+'</span>';
-        }
         if(r.pa!==''){
           htmlS2+='<span style="font-size:10px;color:var(--text3)">'+r.pa+'–'+r.pb+'</span>';
           htmlS2+='<span style="font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;background:'+ptsBg+';color:'+ptsColor+'">'+r.pts+'pts</span>';
         } else {
           htmlS2+='<span style="font-size:10px;color:var(--text3)">sin pred.</span>';
         }
-        htmlS2+='</div></div>';
+        htmlS2+='</div>';
+        // "Who advances" goes BELOW the score/prediction row, as its own clearly
+        // separated line — not mixed inline with the prediction, which was
+        // confusing (looked like part of the player's own score).
+        if(r.res.winner){
+          htmlS2+='<div style="font-size:9px;color:var(--text3);text-align:center;margin-top:4px;padding-top:4px;border-top:0.5px dashed var(--border)">⚽ Resultado oficial: '+r.res.winner+' avanza';
+          if(r.predWinner){
+            const matchedWinner = (r.predWinner.toLowerCase().trim() === r.res.winner.toLowerCase().trim());
+            htmlS2+=' · tu elección: '+r.predWinner+(matchedWinner?' ✓':' ✗');
+          }
+          htmlS2+='</div>';
+        } else if(r.predWinner){
+          // The real match did NOT end in a draw, but the player's OWN prediction
+          // was tied — show who they had picked to advance, as context, even
+          // though that pick wasn't relevant for scoring since 90' had a clear winner.
+          htmlS2+='<div style="font-size:9px;color:var(--text3);text-align:center;margin-top:4px;padding-top:4px;border-top:0.5px dashed var(--border)">Tu pronóstico era empate · elegiste que avanza: '+r.predWinner+'</div>';
+        }
+        htmlS2+='</div>';
       });
       htmlS2+='</div>';
     });
