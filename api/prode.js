@@ -82,6 +82,19 @@ module.exports = async function handler(req, res) {
       return res.json({ ok:true });
     }
 
+    if (action === 'delete-pred') {
+      // Removes one or more specific match-id fields from a player's predictions.
+      // Unlike save-preds (which merges/overwrites fields), this uses hdel so the
+      // field is actually removed from Redis, not just omitted from a future write.
+      const { name, ids } = req.body;
+      if (!name) return res.status(400).json({ error: 'Nombre requerido' });
+      const idList = Array.isArray(ids) ? ids : [ids];
+      if (!idList.length) return res.status(400).json({ error: 'ids requerido' });
+      const key = 'preds:' + name;
+      await redis.hdel(key, ...idList);
+      return res.json({ ok:true, deleted: idList });
+    }
+
     if (action === 'get-preds') {
       const { name } = req.query;
       if (!name) return res.status(400).json({ error: 'Nombre requerido' });
