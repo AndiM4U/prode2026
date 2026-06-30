@@ -1339,6 +1339,23 @@ function stageRes(id,teamA,teamB,side,val){
   stagedResults[id][side]=val;
 }
 
+function stageResElim(id,teamA,teamB,side,val){
+  stageRes(id,teamA,teamB,side,val);
+  // If the new score is no longer a tie, clear any previously staged winner —
+  // it's only relevant for tied scores.
+  const staged = stagedResults[id];
+  if(staged && staged.sa!=='' && staged.sb!=='' && parseInt(staged.sa)!==parseInt(staged.sb)){
+    staged.winner='';
+  }
+  // Re-render so the draw/winner selector appears or disappears live as the
+  // organizer types, without waiting for them to hit "OK" first. Restore focus
+  // to the input they were just typing in, since re-rendering replaces the DOM.
+  renderElimResults();
+  renderTodayMatchesElim();
+  const restored = document.querySelector('input[oninput*="'+id+'"][oninput*="'+side+'"]');
+  if(restored) restored.focus();
+}
+
 async function saveResS1(id,teamA,teamB){
   const staged=stagedResults[id]||{};
   const existing=data.results[id]?(typeof data.results[id]==='string'?JSON.parse(data.results[id]):data.results[id]):null;
@@ -1385,10 +1402,16 @@ function groupFixturesByDate(fixtures){
 function renderElimMatchRow(f){
   const rv=data.results[f.id];
   const res=rv?(typeof rv==='string'?JSON.parse(rv):rv):null;
-  const sa=res?res.sa:''; const sb=res?res.sb:'';
-  const done=sa!==''&&sa!==undefined;
-  const isDraw = done && parseInt(sa)===parseInt(sb);
-  const savedWinner = res?res.winner:'';
+  // Use whichever value is more current: what's staged (currently being typed)
+  // takes priority over what's already saved, so the draw/winner selector reacts
+  // live as the organizer types — not only after they've already hit "OK".
+  const staged = stagedResults[f.id];
+  const sa = (staged && staged.sa!=='') ? staged.sa : (res ? res.sa : '');
+  const sb = (staged && staged.sb!=='') ? staged.sb : (res ? res.sb : '');
+  const done = res && res.sa!==undefined && res.sa!=='';
+  const hasBothScores = sa!=='' && sa!==undefined && sb!=='' && sb!==undefined;
+  const isDraw = hasBothScores && parseInt(sa)===parseInt(sb);
+  const savedWinner = (staged && staged.winner!==undefined && staged.winner!=='') ? staged.winner : (res ? res.winner : '');
   // If it's a draw (goes to penalties), show a winner selector. Mandatory to save in that case.
   const winnerSelector = isDraw ? `
     <div style="display:flex;align-items:center;gap:6px;padding:4px 0 8px;font-size:10px;color:var(--text2)">
@@ -1403,13 +1426,13 @@ function renderElimMatchRow(f){
   return `<div style="font-size:11px;color:var(--text2);padding-top:6px;font-weight:500">${f.label||''}</div>
     <div style="display:grid;grid-template-columns:1fr 36px auto 36px 1fr auto;align-items:center;gap:4px;padding:6px 0">
       <div style="text-align:right;font-size:12px;font-weight:500">${flagImg(f.teamA)}${f.teamA}</div>
-      <input type="number" min="0" max="20" placeholder="–" value="${done?sa:''}"
+      <input type="number" min="0" max="20" placeholder="–" value="${sa!==''?sa:''}"
         style="width:36px;height:34px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'var(--bg2)'};color:var(--text);font-size:15px;font-weight:600"
-        oninput="stageRes('${f.id}','${f.teamA}','${f.teamB}','sa',this.value)">
+        oninput="stageResElim('${f.id}','${f.teamA}','${f.teamB}','sa',this.value)">
       <span style="color:var(--text3);font-size:13px">–</span>
-      <input type="number" min="0" max="20" placeholder="–" value="${done?sb:''}"
+      <input type="number" min="0" max="20" placeholder="–" value="${sb!==''?sb:''}"
         style="width:36px;height:34px;text-align:center;border-radius:var(--r);border:0.5px solid var(--border2);background:${done?'var(--green2)':'var(--bg2)'};color:var(--text);font-size:15px;font-weight:600"
-        oninput="stageRes('${f.id}','${f.teamA}','${f.teamB}','sb',this.value)">
+        oninput="stageResElim('${f.id}','${f.teamA}','${f.teamB}','sb',this.value)">
       <div style="font-size:12px;font-weight:500">${flagImg(f.teamB)}${f.teamB}</div>
       <button style="font-size:10px;padding:3px 7px;border-radius:5px;border:0.5px solid ${done?'var(--teal)':'var(--border2)'};background:${done?'var(--teal2)':'transparent'};color:${done?'var(--teal)':'var(--text2)'};cursor:pointer"
         onclick="saveResElim('${f.id}','${f.teamA}','${f.teamB}')">${done?'✓':'OK'}</button>
