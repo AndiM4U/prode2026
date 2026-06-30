@@ -1019,7 +1019,8 @@ async function savePreds(sec){
       try{
         const p=typeof v==='string'?JSON.parse(v):v;
         if(p.a!=='' && p.b!=='' && parseInt(p.a)===parseInt(p.b) && !p.winner){
-          missingWinner.push(k);
+          const matchNum = parseInt(k.replace('s2_p',''));
+          if(!isMatchLocked(matchNum)) missingWinner.push(k);
         }
       }catch(e){}
     });
