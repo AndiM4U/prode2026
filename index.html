@@ -1005,10 +1005,15 @@ function setPredWinner(id, winnerName){
 }
 
 async function savePreds(sec){
-  // For elimination matches (sec===2), block saving if any tied prediction
-  // is missing the "who advances" pick — it's mandatory once the score is tied.
+  // For elimination matches (sec===2): a tied score with no "who advances" pick
+  // is incomplete and shouldn't be saved as-is, BUT it must NOT block saving
+  // every other prediction in the section. Previously, finding even one
+  // incomplete tied prediction silently aborted the entire save — meaning a
+  // player could fill in 6 matches, miss the winner pick on just one, and lose
+  // ALL 6 with only a toast warning. Now we save everything that's valid and
+  // simply skip (and warn about) the incomplete one(s).
+  let missingWinner = [];
   if(sec===2){
-    let missingWinner = [];
     Object.entries(myPreds).forEach(([k,v])=>{
       if(!k.startsWith('s2_')) return;
       try{
@@ -1018,27 +1023,34 @@ async function savePreds(sec){
         }
       }catch(e){}
     });
-    if(missingWinner.length>0){
-      toast('t-s2','⚠️ Elegí quién avanza en los partidos donde pronosticaste empate');
-      return;
-    }
   }
 
   // Get all existing preds from server first
   const existing = await api('get-preds',{name:user},'GET');
   const allPreds = existing.preds||{};
   
-  // Merge current section preds into all preds
+  // Merge current section preds into all preds, SKIPPING any incomplete tied
+  // prediction (missing winner pick) so it doesn't get saved half-finished —
+  // but every other complete prediction in this section still gets saved.
+  let savedCount=0;
   Object.entries(myPreds).forEach(([k,v])=>{
     const ks=k.startsWith('s1_')?1:2;
     if(ks!==sec) return;
-    try{const p=typeof v==='string'?JSON.parse(v):v;if(p.a!==''||p.b!=='')allPreds[k]=typeof v==='string'?v:JSON.stringify(v);}catch(e){}
+    if(missingWinner.includes(k)) return; // skip incomplete tie, don't save it yet
+    try{
+      const p=typeof v==='string'?JSON.parse(v):v;
+      if(p.a!==''||p.b!==''){ allPreds[k]=typeof v==='string'?v:JSON.stringify(v); savedCount++; }
+    }catch(e){}
   });
   
   await api('save-preds',{name:user,preds:allPreds});
   myPreds=allPreds;
-  const secCount=Object.keys(allPreds).filter(k=>k.startsWith('s'+sec+'_')).length;
-  toast(`t-s${sec}`,`✅ ${secCount} pronósticos guardados`);
+  if(missingWinner.length>0){
+    toast(`t-s${sec}`,`✅ ${savedCount} guardados · ⚠️ ${missingWinner.length} partido(s) en empate sin elegir quién avanza no se guardaron`);
+  } else {
+    const secCount=Object.keys(allPreds).filter(k=>k.startsWith('s'+sec+'_')).length;
+    toast(`t-s${sec}`,`✅ ${secCount} pronósticos guardados`);
+  }
 }
 
 async function savePlayerData(){
