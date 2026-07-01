@@ -261,6 +261,23 @@ input:checked + .sw-track::after{transform:translateX(20px)}
       <button class="btn btn-teal" onclick="confirmSuggestedFixtures()" style="margin-top:10px">Confirmar cruces y habilitar Eliminatorias</button>
       <div id="t-suggested" class="toast"></div>
     </div>
+    <div id="elim-round-section" style="display:none;margin-top:16px">
+      <div id="elim-round-title" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Cruces sugeridos</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Basado en resultados de la ronda anterior. Revisá antes de confirmar.</div>
+      <div id="elim-round-suggested"></div>
+      <button id="elim-round-confirm-btn" class="btn btn-teal" onclick="confirmElimRoundFixtures()" style="margin-top:10px">Confirmar cruces</button>
+      <div id="t-elim-round" class="toast"></div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Calcular cruces de ronda siguiente</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn" style="font-size:12px;padding:6px 12px" onclick="calcElimRound('Octavos')">Octavos</button>
+        <button class="btn" style="font-size:12px;padding:6px 12px" onclick="calcElimRound('Cuartos')">Cuartos</button>
+        <button class="btn" style="font-size:12px;padding:6px 12px" onclick="calcElimRound('Semifinal')">Semis</button>
+        <button class="btn" style="font-size:12px;padding:6px 12px" onclick="calcElimRound('Tercer puesto')">3er puesto</button>
+        <button class="btn" style="font-size:12px;padding:6px 12px" onclick="calcElimRound('Final')">Final</button>
+      </div>
+    </div>
   </div>
 
   <div id="o-cruces" class="sec">
@@ -1765,6 +1782,125 @@ async function confirmSuggestedFixtures(){
   await api('save-config',{pass:orgPass,rc:cfg.rc||'',rg:cfg.rg||'',sections:cfg.sections});
   await loadAll();
   toast('t-suggested',`✅ ${suggestedFixtures2.length} cruces confirmados · Eliminatorias habilitadas`);
+}
+
+// ── ELIMINATION BRACKET AUTO-CALC (Octavos → Final) ──────────────
+// Returns the winning team name from a completed s2 match, or null if
+// the result hasn't been loaded yet. Normalizes teamA/teamB order to
+// match the stored fixture so the comparison is always reliable.
+function getMatchWinner(matchNum){
+  const id='s2_p'+matchNum;
+  const rv=(data.results||{})[id];
+  if(!rv) return null;
+  const res=typeof rv==='string'?JSON.parse(rv):rv;
+  const fix=(data.fixtures||[]).find(f=>f.id===id);
+  if(!fix) return null;
+  let sa=parseInt(res.sa),sb=parseInt(res.sb);
+  const norm=s=>(s||'').toLowerCase().trim();
+  // If result was stored with teams swapped vs the fixture, flip scores
+  if(res.teamA && norm(res.teamA)!==norm(fix.teamA) && norm(res.teamA)===norm(fix.teamB)){
+    const tmp=sa; sa=sb; sb=tmp;
+  }
+  if(sa>sb) return fix.teamA;
+  if(sb>sa) return fix.teamB;
+  if(res.winner) return res.winner; // penalties/extra time winner
+  return null;
+}
+
+function getMatchLoser(matchNum){
+  const id='s2_p'+matchNum;
+  const rv=(data.results||{})[id];
+  if(!rv) return null;
+  const res=typeof rv==='string'?JSON.parse(rv):rv;
+  const fix=(data.fixtures||[]).find(f=>f.id===id);
+  if(!fix) return null;
+  let sa=parseInt(res.sa),sb=parseInt(res.sb);
+  const norm=s=>(s||'').toLowerCase().trim();
+  if(res.teamA && norm(res.teamA)!==norm(fix.teamA) && norm(res.teamA)===norm(fix.teamB)){
+    const tmp=sa; sa=sb; sb=tmp;
+  }
+  if(sa>sb) return fix.teamB;
+  if(sb>sa) return fix.teamA;
+  if(res.winner) return norm(res.winner)===norm(fix.teamA)?fix.teamB:fix.teamA;
+  return null;
+}
+
+// Official FIFA 2026 bracket — each entry specifies which match's winner
+// (or loser for the 3rd place match) feeds each side.
+const ELIM_BRACKET_ROUNDS = {
+  'Octavos': [
+    { match:90, label:'Octavos #1 (P90)', fromA:73, fromB:75 },
+    { match:89, label:'Octavos #2 (P89)', fromA:74, fromB:77 },
+    { match:91, label:'Octavos #3 (P91)', fromA:76, fromB:78 },
+    { match:92, label:'Octavos #4 (P92)', fromA:79, fromB:80 },
+    { match:93, label:'Octavos #5 (P93)', fromA:83, fromB:84 },
+    { match:94, label:'Octavos #6 (P94)', fromA:81, fromB:82 },
+    { match:95, label:'Octavos #7 (P95)', fromA:86, fromB:88 },
+    { match:96, label:'Octavos #8 (P96)', fromA:85, fromB:87 },
+  ],
+  'Cuartos': [
+    { match:97,  label:'Cuartos #1 (P97)',  fromA:89, fromB:90 },
+    { match:98,  label:'Cuartos #2 (P98)',  fromA:93, fromB:94 },
+    { match:99,  label:'Cuartos #3 (P99)',  fromA:91, fromB:92 },
+    { match:100, label:'Cuartos #4 (P100)', fromA:95, fromB:96 },
+  ],
+  'Semifinal': [
+    { match:101, label:'Semifinal #1 (P101)', fromA:97,  fromB:98  },
+    { match:102, label:'Semifinal #2 (P102)', fromA:99,  fromB:100 },
+  ],
+  'Tercer puesto': [
+    { match:103, label:'Tercer puesto (P103)', fromA:101, fromB:102, loserA:true, loserB:true },
+  ],
+  'Final': [
+    { match:104, label:'Final (P104)', fromA:101, fromB:102 },
+  ],
+};
+
+let suggestedElimRound=[];
+
+function calcElimRound(roundKey){
+  const bracket=ELIM_BRACKET_ROUNDS[roundKey];
+  if(!bracket){toast('t-elim-round','⚠️ Ronda desconocida');return;}
+  suggestedElimRound=[];
+  let unresolvedCount=0;
+  bracket.forEach(m=>{
+    const teamA=m.loserA?getMatchLoser(m.fromA):getMatchWinner(m.fromA);
+    const teamB=m.loserB?getMatchLoser(m.fromB):getMatchWinner(m.fromB);
+    if(teamA&&teamB){
+      const slotInfo=ELIM_SLOTS_BY_MATCH[m.match];
+      const slotEntry=FIXTURE_ELIM.find(s=>s.match===m.match);
+      const fullLabel=slotInfo?(m.label+' · '+slotInfo.date+' '+slotInfo.time+'hs'):m.label;
+      suggestedElimRound.push({id:'s2_p'+m.match,label:fullLabel,teamA,teamB,match:m.match,slotEntry});
+    } else {
+      unresolvedCount++;
+    }
+  });
+  let html=suggestedElimRound.map(f=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border-radius:var(--r);margin-bottom:5px;border:0.5px solid var(--border)">
+      <span style="font-size:10px;color:var(--text2);min-width:110px">${f.label}</span>
+      <span style="font-size:12px;font-weight:600;flex:1;text-align:right">${f.teamA}</span>
+      <span style="font-size:11px;color:var(--text3)">vs</span>
+      <span style="font-size:12px;font-weight:600;flex:1">${f.teamB}</span>
+    </div>`).join('');
+  if(unresolvedCount>0){
+    html+=`<div style="font-size:11px;color:var(--text3);padding:8px 0;text-align:center">⚠️ ${unresolvedCount} cruce(s) pendientes — faltan resultados de la ronda anterior</div>`;
+  }
+  document.getElementById('elim-round-suggested').innerHTML=html||'<div class="empty">No se pudieron resolver los cruces aún.</div>';
+  document.getElementById('elim-round-title').textContent='Cruces sugeridos — '+roundKey;
+  document.getElementById('elim-round-section').style.display='block';
+  const total=bracket.length;
+  toast('t-elim-round',suggestedElimRound.length===total?`✅ ${total} cruces de ${roundKey} listos para confirmar`:`⚠️ ${suggestedElimRound.length}/${total} cruces resueltos — esperando resultados`);
+}
+
+async function confirmElimRoundFixtures(){
+  if(!suggestedElimRound.length){toast('t-elim-round','⚠️ Nada para confirmar');return;}
+  for(const f of suggestedElimRound){
+    const slotEntry=f.slotEntry;
+    const slotKey=slotEntry?(slotEntry.round+'-'+slotEntry.slot):'';
+    await api('add-fixture',{pass:orgPass,section:2,id:f.id,teamA:f.teamA,teamB:f.teamB,label:f.label,slotKey});
+  }
+  await loadAll();
+  toast('t-elim-round',`✅ ${suggestedElimRound.length} cruces confirmados`);
 }
 
 // ── ORG PLAYERS ──────────────────────────────────────────────────
