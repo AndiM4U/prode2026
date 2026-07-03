@@ -903,11 +903,17 @@ function renderS2Inputs(){
   if(!fixtures.length){el.innerHTML='<div class="empty">El organizador cargará los cruces cuando se definan.</div>';if(btn)btn.style.display='none';return;}
   const sec=data.config?.sections||{};
   if(btn) btn.style.display=sec.s2?'block':'none';
-  const { byDate, order } = groupFixturesByDate(fixtures);
+  const { byRound, order } = groupFixturesByRound(fixtures);
   let html='';
-  order.forEach(date=>{
-    html+='<div class="stitle">'+date+'</div><div class="card" style="padding:8px 12px">';
-    byDate[date].forEach(f=>{ html+=renderElimInputRow(f); });
+  order.forEach(roundKey=>{
+    const rd = ROUND_DISPLAY.find(r=>r.key===roundKey)||{label:roundKey,emoji:'⚽'};
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px">
+      <span style="font-size:16px">${rd.emoji}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--text)">${rd.label}</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <div class="card" style="padding:8px 12px">`;
+    byRound[roundKey].forEach(f=>{ html+=renderElimInputRow(f); });
     html+='</div>';
   });
   el.innerHTML=html;
@@ -1414,6 +1420,38 @@ function getFixtureUTC(f){
   if(f.slotKey && ELIM_SLOTS[f.slotKey]) return ELIM_SLOTS[f.slotKey].utcMs;
   return null;
 }
+// Round display config: order, label and emoji for each elimination round
+const ROUND_DISPLAY = [
+  { key:'Dieciseisavos', label:'Dieciseisavos de Final', emoji:'⚔️' },
+  { key:'Octavos',       label:'Octavos de Final',       emoji:'🏟️' },
+  { key:'Cuartos',       label:'Cuartos de Final',       emoji:'⭐' },
+  { key:'Semifinal',     label:'Semifinal',               emoji:'🔥' },
+  { key:'Tercer puesto', label:'Tercer Puesto',           emoji:'🥉' },
+  { key:'Final',         label:'Final',                   emoji:'🏆' },
+];
+
+function getRoundForFixture(f){
+  if(!f.slotKey) return 'Otros';
+  const parts = f.slotKey.split('-');
+  return parts.slice(0, parts.length-1).join('-') || 'Otros';
+}
+
+function groupFixturesByRound(fixtures){
+  const byRound = {};
+  const knownKeys = ROUND_DISPLAY.map(r=>r.key);
+  fixtures.forEach(f=>{
+    const r = getRoundForFixture(f);
+    if(!byRound[r]) byRound[r] = [];
+    byRound[r].push(f);
+  });
+  // Sort matches within each round by time
+  Object.values(byRound).forEach(list=>list.sort((a,b)=>(getFixtureUTC(a)||0)-(getFixtureUTC(b)||0)));
+  // Order rounds in official sequence
+  const order = knownKeys.filter(k=>byRound[k]);
+  if(byRound['Otros']) order.push('Otros');
+  return { byRound, order };
+}
+
 function groupFixturesByDate(fixtures){
   const byDate = {};
   const order = [];
@@ -1479,12 +1517,17 @@ function renderElimResults(){
   if(!el) return;
   const fixtures=data.fixtures||[];
   if(!fixtures.length){el.innerHTML='<div class="empty">Cargá cruces desde "Cruces" para habilitar resultados.</div>';return;}
-  const { byDate, order } = groupFixturesByDate(fixtures);
+  const { byRound, order } = groupFixturesByRound(fixtures);
   let html='';
-  order.forEach(date=>{
-    html+=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 6px;padding-bottom:3px;border-bottom:0.5px solid var(--border)">${date}</div>`;
-    html+='<div class="card" style="padding:8px 12px">';
-    byDate[date].forEach(f=>{ html+=renderElimMatchRow(f); });
+  order.forEach(roundKey=>{
+    const rd = ROUND_DISPLAY.find(r=>r.key===roundKey)||{label:roundKey,emoji:'⚽'};
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px">
+      <span style="font-size:16px">${rd.emoji}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--text)">${rd.label}</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <div class="card" style="padding:8px 12px">`;
+    byRound[roundKey].forEach(f=>{ html+=renderElimMatchRow(f); });
     html+='</div>';
   });
   el.innerHTML=html;
