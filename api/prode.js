@@ -62,11 +62,14 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'save-player') {
-      const { name, champ, goleador } = req.body;
+      const { name, champ, goleador, champUnlocked, pass } = req.body;
       if (!name) return res.status(400).json({ error: 'Nombre requerido' });
       const existing = await redis.hget('players', name);
       const existingData = existing ? (typeof existing==='string' ? JSON.parse(existing) : existing) : {};
-      await redis.hset('players', { [name]: JSON.stringify({ ...existingData, name, champ, goleador }) });
+      const updated = { ...existingData, name, champ, goleador };
+      // champUnlocked can only be set/cleared by the organizer
+      if (pass === ORG_PASS) updated.champUnlocked = champUnlocked === true;
+      await redis.hset('players', { [name]: JSON.stringify(updated) });
       return res.json({ ok:true });
     }
 
