@@ -187,6 +187,9 @@ input:checked + .sw-track::after{transform:translateX(20px)}
         <div class="ig"><label>🏆 Campeón del mundial (+$50.000)</label><input id="my-champ" type="text" placeholder="Ej: Argentina"></div>
         <div class="ig"><label>⚽ Goleador del torneo (+$50.000)</label><input id="my-gol" type="text" placeholder="Ej: Messi"></div>
         <button class="btn btn-blue" onclick="savePlayerData()">Guardar</button>
+        <div id="champ-gol-lock-notice" style="display:none;font-size:12px;color:var(--text3);padding:8px 0">
+          🔒 Plazo cerrado — Mié 8 Jul 14:00hs ARG. Contactá al organizador para modificar.
+        </div>
         <div id="t-extra" class="toast"></div>
       </div>
       <div class="prize-card pa" style="margin-top:4px">
@@ -570,6 +573,7 @@ async function doLogin(){
     renderS2Inputs();
     updateSectionAccess();
     renderPositionBanner();
+    updateChampGolLockUI();
     showScreen('s-player');
   }
 }
@@ -928,6 +932,18 @@ function renderS2Inputs(){
 // ── TIME LOCK ────────────────────────────────────────────────────
 const _MONTHS = {'Ene':1,'Feb':2,'Mar':3,'Abr':4,'May':5,'Jun':6,'Jul':7,'Ago':8,'Sep':9,'Oct':10,'Nov':11,'Dic':12};
 
+// ── CAMPEÓN/GOLEADOR DEADLINE ────────────────────────────────────
+// Wed Jul 8 2026 at 14:00 Argentina time (UTC-3) = 17:00 UTC
+const CHAMP_GOL_DEADLINE_UTC = Date.UTC(2026, 6, 8, 17, 0, 0);
+
+function isChampGolLocked(){
+  // If the player has been individually unlocked by the organizer, bypass deadline
+  const pd = data.players && data.players[user];
+  const p = pd ? (typeof pd==='string' ? JSON.parse(pd) : pd) : {};
+  if(p.champUnlocked) return false;
+  return Date.now() >= CHAMP_GOL_DEADLINE_UTC;
+}
+
 // Convert an Argentina date string ('Dom 28 Jun') + time ('16:00') to a UTC timestamp.
 // Centralized so both group-stage and elimination fixtures use identical logic.
 function argDateTimeToUTC(dateStr, timeStr){
@@ -1084,11 +1100,27 @@ async function savePreds(sec){
 }
 
 async function savePlayerData(){
+  if(isChampGolLocked()){
+    toast('t-extra','⛔ El plazo para cargar Campeón y Goleador cerró el Mié 8 Jul 14:00hs');
+    return;
+  }
   const champ=document.getElementById('my-champ').value.trim();
   const gol=document.getElementById('my-gol').value.trim();
   await api('save-player',{name:user,champ,goleador:gol});
   await loadAll();
   toast('t-extra','✅ Guardado');
+}
+
+function updateChampGolLockUI(){
+  const locked = isChampGolLocked();
+  const champInput = document.getElementById('my-champ');
+  const golInput = document.getElementById('my-gol');
+  const btn = document.querySelector('button[onclick="savePlayerData()"]');
+  const notice = document.getElementById('champ-gol-lock-notice');
+  if(champInput) champInput.disabled = locked;
+  if(golInput) golInput.disabled = locked;
+  if(btn) btn.style.display = locked ? 'none' : '';
+  if(notice) notice.style.display = locked ? 'block' : 'none';
 }
 
 
@@ -2006,7 +2038,22 @@ function renderOrgChampGolEditor(name, p){
       </div>
     </div>
     <button class="btn-sm" onclick="orgSaveChampGol('${name}')">Guardar cambios</button>
+    <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">
+      <div style="font-size:9px;color:var(--text3);margin-bottom:4px">🔐 Acceso jugador al Campeón/Goleador (cierra Mié 8 Jul 14hs)</div>
+      ${p.champUnlocked
+        ? `<button class="btn-sm" style="background:var(--red1);color:#fff" onclick="orgToggleChampUnlock('${name}',false)">🔓 Habilitado — Click para cerrar</button>`
+        : `<button class="btn-sm" onclick="orgToggleChampUnlock('${name}',true)">🔒 Cerrado — Click para habilitar</button>`
+      }
+    </div>
   </div>`;
+}
+
+async function orgToggleChampUnlock(name, unlock){
+  const pd = data.players[name]||{};
+  const p = typeof pd==='string' ? JSON.parse(pd) : pd;
+  await api('save-player',{name, champ:p.champ||'', goleador:p.goleador||'', champUnlocked:unlock, pass:orgPass});
+  await loadAll();
+  toast('t-players', unlock ? `✅ ${name} puede editar Campeón/Goleador` : `🔒 Acceso cerrado para ${name}`);
 }
 
 async function orgSaveChampGol(name){
